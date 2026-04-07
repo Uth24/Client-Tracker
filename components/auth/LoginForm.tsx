@@ -3,17 +3,23 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { PasswordField } from "@/components/auth/PasswordField";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
 export function LoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setInfo(null);
     setLoading(true);
     const supabase = createClient();
     const { error: signError } = await supabase.auth.signInWithPassword({
@@ -25,58 +31,116 @@ export function LoginForm() {
       setError(signError.message);
       return;
     }
+    if (remember && typeof window !== "undefined") {
+      localStorage.setItem("client-track-remember", "1");
+    } else {
+      localStorage.removeItem("client-track-remember");
+    }
     router.push("/vendors");
     router.refresh();
   }
 
+  async function handleForgotPassword() {
+    setError(null);
+    setInfo(null);
+    const trimmed = email.trim();
+    if (!trimmed) {
+      setError("Enter your email above, then tap Forgot password.");
+      return;
+    }
+    setForgotLoading(true);
+    const supabase = createClient();
+    const origin = window.location.origin;
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+      trimmed,
+      { redirectTo: `${origin}/auth/callback?next=/login` },
+    );
+    setForgotLoading(false);
+    if (resetError) {
+      setError(resetError.message);
+      return;
+    }
+    setInfo("Check your email for a reset link.");
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+    <form onSubmit={handleSubmit} className="mt-8 space-y-5">
       <div>
         <label
           htmlFor="login-email"
-          className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+          className="block text-xs font-medium text-zinc-500"
         >
-          Email
+          Login
         </label>
         <input
           id="login-email"
           type="email"
           autoComplete="email"
           required
+          placeholder="Email address"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+          className="mt-1.5 w-full rounded-xl border-0 bg-zinc-100 px-3.5 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none ring-1 ring-transparent transition focus:bg-white focus:ring-2 focus:ring-blue-500"
         />
       </div>
-      <div>
-        <label
-          htmlFor="login-password"
-          className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+
+      <PasswordField
+        id="login-password"
+        label="Password"
+        value={password}
+        onChange={setPassword}
+        autoComplete="current-password"
+      />
+
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={remember}
+            onClick={() => setRemember((v) => !v)}
+            className={`relative h-7 w-12 shrink-0 rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
+              remember ? "bg-blue-600" : "bg-zinc-200"
+            }`}
+          >
+            <span
+              className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                remember ? "translate-x-[1.25rem]" : "translate-x-0"
+              }`}
+            />
+          </button>
+          <span className="text-sm text-zinc-600">Remember me</span>
+        </div>
+        <button
+          type="button"
+          onClick={handleForgotPassword}
+          disabled={forgotLoading}
+          className="shrink-0 text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline disabled:opacity-50"
         >
-          Password
-        </label>
-        <input
-          id="login-password"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
-        />
+          {forgotLoading ? "Sending…" : "Forgot password?"}
+        </button>
       </div>
+
       {error ? (
-        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+        <p className="text-sm text-red-600" role="alert">
           {error}
         </p>
       ) : null}
+      {info ? (
+        <p className="text-sm text-green-700" role="status">
+          {info}
+        </p>
+      ) : null}
+
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-lg bg-zinc-900 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+        className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"
       >
         {loading ? "Signing in…" : "Sign in"}
       </button>
+
+      <GoogleSignInButton />
     </form>
   );
 }

@@ -1,24 +1,26 @@
 import Link from "next/link";
+import { AuthBrand } from "@/components/auth/AuthBrand";
 import { LoginForm } from "@/components/auth/LoginForm";
 
 export default function LoginPage() {
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
-        Sign in
+    <div className="w-full max-w-md mx-auto lg:mx-0">
+      <AuthBrand />
+      <h1 className="mt-8 text-3xl font-bold tracking-tight text-zinc-900">
+        Nice to see you again
       </h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-        Client Track dashboard
-      </p>
       <LoginForm />
-      <p className="mt-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
-        No account?{" "}
+      <p className="mt-8 text-center text-sm text-zinc-500">
+        Don&apos;t have an account?{" "}
         <Link
           href="/signup"
-          className="font-medium text-zinc-900 underline dark:text-zinc-100"
+          className="font-semibold text-blue-600 hover:text-blue-700 hover:underline"
         >
-          Sign up
+          Sign up now
         </Link>
+      </p>
+      <p className="mt-10 text-center text-xs text-zinc-400">
+        © {new Date().getFullYear()} Client Track
       </p>
     </div>
   );

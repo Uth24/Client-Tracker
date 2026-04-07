@@ -37,7 +37,7 @@ export default async function VendorsPage() {
         Vendors
       </h1>
       <p className="mt-1 text-zinc-600 dark:text-zinc-400">
-        Search by name or job type. Click a row to view details.
+        Search by name, job type, or description. Click a row to view details.
       </p>
       <div className="mt-8">
         <VendorList initialVendors={vendors} />

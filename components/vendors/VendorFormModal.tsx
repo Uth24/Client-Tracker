@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Vendor, VendorImage } from "@/lib/types/vendors";
+import { VENDOR_IMAGES_BUCKET } from "@/lib/constants";
+import { formatClientError } from "@/lib/format-error";
 import { uploadVendorImageFiles } from "@/lib/vendors/storage";
 import { Modal } from "@/components/ui/Modal";
 
@@ -13,6 +15,72 @@ type Props = {
   onClose: () => void;
   onSaved: () => void;
 };
+
+/** Local previews + clear copy: files are not uploaded until the form is saved. */
+function PendingImageQueue({
+  files,
+  onRemove,
+  saveButtonLabel,
+}: {
+  files: File[];
+  onRemove: (index: number) => void;
+  saveButtonLabel: string;
+}) {
+  const urls = useMemo(
+    () => files.map((f) => URL.createObjectURL(f)),
+    [files],
+  );
+
+  useEffect(() => {
+    return () => {
+      urls.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [urls]);
+
+  if (files.length === 0) return null;
+
+  return (
+    <div
+      className="rounded-xl border-2 border-dashed border-blue-300 bg-blue-50/80 p-4 dark:border-blue-700 dark:bg-blue-950/40"
+      role="status"
+      aria-live="polite"
+    >
+      <p className="text-sm font-semibold text-blue-950 dark:text-blue-100">
+        {files.length} photo{files.length === 1 ? "" : "s"} ready to upload
+      </p>
+      <p className="mt-1 text-xs leading-relaxed text-blue-900/85 dark:text-blue-200/90">
+        Choosing files only stages them here. They are sent to Supabase Storage and
+        saved to <span className="font-medium">vendor_images</span> when you click{" "}
+        <span className="font-semibold">&quot;{saveButtonLabel}&quot;</span>.
+      </p>
+      <div className="mt-3 flex flex-wrap gap-3">
+        {files.map((f, i) => (
+          <div
+            key={`${f.name}-${f.size}-${i}`}
+            className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100 shadow-sm dark:border-zinc-600 dark:bg-zinc-800"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={urls[i]}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+            <button
+              type="button"
+              onClick={() => onRemove(i)}
+              className="absolute right-1 top-1 rounded-md bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white hover:bg-black/80"
+            >
+              Remove
+            </button>
+            <span className="absolute bottom-0 left-0 right-0 truncate bg-black/55 px-1 py-0.5 text-[10px] text-white">
+              {f.name}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function VendorFormModal({
   mode,
@@ -29,12 +97,31 @@ export function VendorFormModal({
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const fileInputId = useId();
+  /** Tracks whether the dialog was already open (avoids clearing staged files on parent re-renders). */
+  const wasOpenRef = useRef(false);
+  /** Always matches staged files — submit reads this so uploads never use a stale empty array. */
+  const newFilesRef = useRef<File[]>([]);
+
+  const saveButtonLabel = mode === "add" ? "Add vendor" : "Save";
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      wasOpenRef.current = false;
+      return;
+    }
+
+    const entered = !wasOpenRef.current;
+    wasOpenRef.current = true;
+
+    /* Only reset when open transitions false → true, not when vendor[] or router.refresh() re-renders. */
+    if (!entered) return;
+
     setError(null);
     setNewFiles([]);
+    newFilesRef.current = [];
     setRemovedIds(new Set());
+
     if (mode === "edit" && vendor) {
       setName(vendor.name);
       setDescription(vendor.description ?? "");
@@ -46,7 +133,8 @@ export function VendorFormModal({
       setType("");
       setExistingImages([]);
     }
-  }, [open, mode, vendor]);
+    /* vendor?.id: re-run when switching edit target; entered is false if already open with same transition. */
+  }, [open, mode, vendor?.id]);
 
   function toggleRemoveImage(id: string) {
     setRemovedIds((prev) => {
@@ -60,12 +148,21 @@ export function VendorFormModal({
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const list = e.target.files;
     if (!list?.length) return;
-    setNewFiles((prev) => [...prev, ...Array.from(list)]);
+    const picked = Array.from(list);
+    setNewFiles((prev) => {
+      const next = [...prev, ...picked];
+      newFilesRef.current = next;
+      return next;
+    });
     e.target.value = "";
   }
 
   function removeNewFile(index: number) {
-    setNewFiles((prev) => prev.filter((_, i) => i !== index));
+    setNewFiles((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      newFilesRef.current = next;
+      return next;
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -81,6 +178,8 @@ export function VendorFormModal({
     }
 
     setSaving(true);
+    const filesToUpload = newFilesRef.current.slice();
+
     try {
       if (mode === "add") {
         const { data: row, error: insErr } = await supabase
@@ -97,22 +196,27 @@ export function VendorFormModal({
         if (insErr) throw insErr;
         if (!row) throw new Error("No vendor returned");
 
-        if (newFiles.length > 0) {
-          const urls = await uploadVendorImageFiles(
-            supabase,
-            user.id,
-            row.id,
-            newFiles,
-          );
-          const rows = urls.map((image_url) => ({
-            vendor_id: row.id,
-            user_id: user.id,
-            image_url,
-          }));
-          const { error: imgErr } = await supabase
-            .from("vendor_images")
-            .insert(rows);
-          if (imgErr) throw imgErr;
+        try {
+          if (filesToUpload.length > 0) {
+            const urls = await uploadVendorImageFiles(
+              supabase,
+              user.id,
+              row.id,
+              filesToUpload,
+            );
+            const rows = urls.map((image_url) => ({
+              vendor_id: row.id,
+              user_id: user.id,
+              image_url,
+            }));
+            const { error: imgErr } = await supabase
+              .from("vendor_images")
+              .insert(rows);
+            if (imgErr) throw imgErr;
+          }
+        } catch (imgFlowErr) {
+          await supabase.from("vendors").delete().eq("id", row.id);
+          throw imgFlowErr;
         }
       } else if (vendor) {
         const { error: upErr } = await supabase
@@ -135,12 +239,12 @@ export function VendorFormModal({
           if (delErr) throw delErr;
         }
 
-        if (newFiles.length > 0) {
+        if (filesToUpload.length > 0) {
           const urls = await uploadVendorImageFiles(
             supabase,
             user.id,
             vendor.id,
-            newFiles,
+            filesToUpload,
           );
           const rows = urls.map((image_url) => ({
             vendor_id: vendor.id,
@@ -157,7 +261,7 @@ export function VendorFormModal({
       onSaved();
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(formatClientError(err));
     } finally {
       setSaving(false);
     }
@@ -213,24 +317,55 @@ export function VendorFormModal({
           />
         </div>
         <div>
-          <p className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <span className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
             Images
-          </p>
+          </span>
           <p className="mt-0.5 text-xs text-zinc-500">
-            Upload multiple files. Stored in Supabase Storage (
+            Bucket{" "}
             <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">
-              vendor-images
+              {VENDOR_IMAGES_BUCKET}
             </code>
-            ).
+            . If upload fails, run{" "}
+            <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">
+              supabase/storage-setup.sql
+            </code>{" "}
+            in the Supabase SQL editor.
           </p>
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={onFileChange}
-            className="mt-2 block w-full text-sm text-zinc-600 file:mr-3 file:rounded-lg file:border-0 file:bg-zinc-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-zinc-900 dark:text-zinc-400 dark:file:bg-zinc-800 dark:file:text-zinc-100"
-          />
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {/*
+              Overlay the real <input type="file"> on the visible control. Programmatic
+              input.click() from a separate button is blocked or flaky in Safari and some
+              browsers; a direct click on the input (even opacity-0) is treated as user intent.
+            */}
+            <label className="relative inline-flex min-h-[42px] min-w-[132px] cursor-pointer items-center justify-center rounded-lg border border-zinc-300 bg-white px-4 py-2 shadow-sm hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800 dark:hover:bg-zinc-700">
+              <input
+                id={fileInputId}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={onFileChange}
+                className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+                style={{ fontSize: 0 }}
+              />
+              <span className="pointer-events-none text-sm font-medium text-zinc-800 dark:text-zinc-100">
+                Choose files
+              </span>
+            </label>
+            {newFiles.length > 0 ? (
+              <span className="text-sm font-medium text-green-700 dark:text-green-400">
+                {newFiles.length} file{newFiles.length === 1 ? "" : "s"} staged
+              </span>
+            ) : (
+              <span className="text-sm text-zinc-500">No files staged yet</span>
+            )}
+          </div>
         </div>
+
+        <PendingImageQueue
+          files={newFiles}
+          onRemove={removeNewFile}
+          saveButtonLabel={saveButtonLabel}
+        />
 
         {mode === "edit" && existingImages.length > 0 ? (
           <div>
@@ -269,26 +404,6 @@ export function VendorFormModal({
           </div>
         ) : null}
 
-        {newFiles.length > 0 ? (
-          <ul className="space-y-1 text-sm text-zinc-600 dark:text-zinc-400">
-            {newFiles.map((f, i) => (
-              <li
-                key={`${f.name}-${i}`}
-                className="flex items-center justify-between gap-2 rounded-lg bg-zinc-50 px-2 py-1 dark:bg-zinc-800"
-              >
-                <span className="truncate">{f.name}</span>
-                <button
-                  type="button"
-                  onClick={() => removeNewFile(i)}
-                  className="shrink-0 text-red-600 hover:underline dark:text-red-400"
-                >
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-
         {error ? (
           <p className="text-sm text-red-600 dark:text-red-400" role="alert">
             {error}
@@ -308,7 +423,7 @@ export function VendorFormModal({
             disabled={saving}
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
-            {saving ? "Saving…" : mode === "add" ? "Add vendor" : "Save"}
+            {saving ? "Saving…" : saveButtonLabel}
           </button>
         </div>
       </form>
