@@ -170,6 +170,7 @@ export function CalendarBoard({ initialJobs }: Props) {
   const [anchorDate, setAnchorDate] = useState(() => new Date());
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [mobilePageStart, setMobilePageStart] = useState(0);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -229,6 +230,18 @@ export function CalendarBoard({ initialJobs }: Props) {
 
     return { days, dayToJobs: map, unscheduled };
   }, [jobs, anchorDate, view]);
+
+  const mobilePageSize = view === "week" ? 7 : 7;
+
+  useEffect(() => {
+    // On mobile agenda, default to the page containing the anchor date (today on first load).
+    const key = toISODate(anchorDate);
+    const idx = days.findIndex((d) => d.key === key);
+    const safeIdx = idx >= 0 ? idx : 0;
+    const start = Math.floor(safeIdx / mobilePageSize) * mobilePageSize;
+    setMobilePageStart(start);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [anchorDate, view, days.length]);
 
   const headerText = useMemo(() => {
     if (view === "month") return monthLabel(anchorDate);
@@ -360,8 +373,39 @@ export function CalendarBoard({ initialJobs }: Props) {
       {/* Mobile: agenda-style stacked days (no horizontal swipe). */}
       <div className="sm:hidden">
         <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+          {days.length > mobilePageSize ? (
+            <div className="flex items-center justify-between gap-2">
+              <button
+                type="button"
+                disabled={mobilePageStart <= 0}
+                onClick={() =>
+                  setMobilePageStart((s) => Math.max(0, s - mobilePageSize))
+                }
+                className="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50 disabled:opacity-40"
+              >
+                Prev
+              </button>
+              <div className="text-xs font-semibold text-zinc-600">
+                {Math.floor(mobilePageStart / mobilePageSize) + 1} /{" "}
+                {Math.max(1, Math.ceil(days.length / mobilePageSize))}
+              </div>
+              <button
+                type="button"
+                disabled={mobilePageStart + mobilePageSize >= days.length}
+                onClick={() =>
+                  setMobilePageStart((s) =>
+                    Math.min(days.length - 1, s + mobilePageSize),
+                  )
+                }
+                className="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50 disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          ) : null}
+
           <div className="space-y-3">
-            {days.map(({ date, key, inMonth }) => {
+            {days.slice(mobilePageStart, mobilePageStart + mobilePageSize).map(({ date, key, inMonth }) => {
               const list = dayToJobs.get(key) ?? [];
               const display = list.slice(0, view === "month" ? 5 : 8);
               const more = list.length - display.length;
