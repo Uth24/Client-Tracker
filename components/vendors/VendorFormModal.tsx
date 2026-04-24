@@ -26,10 +26,7 @@ function PendingImageQueue({
   onRemove: (index: number) => void;
   saveButtonLabel: string;
 }) {
-  const urls = useMemo(
-    () => files.map((f) => URL.createObjectURL(f)),
-    [files],
-  );
+  const urls = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
 
   useEffect(() => {
     return () => {
@@ -49,8 +46,9 @@ function PendingImageQueue({
         {files.length} photo{files.length === 1 ? "" : "s"} ready to upload
       </p>
       <p className="mt-1 text-xs leading-relaxed text-blue-900/85 dark:text-blue-200/90">
-        Choosing files only stages them here. They are sent to Supabase Storage and
-        saved to <span className="font-medium">vendor_images</span> when you click{" "}
+        Choosing files only stages them here. They are sent to Supabase Storage
+        and saved to <span className="font-medium">vendor_images</span> when you
+        click{" "}
         <span className="font-semibold">&quot;{saveButtonLabel}&quot;</span>.
       </p>
       <div className="mt-3 flex flex-wrap gap-3">
@@ -60,11 +58,7 @@ function PendingImageQueue({
             className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100 shadow-sm dark:border-zinc-600 dark:bg-zinc-800"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={urls[i]}
-              alt=""
-              className="h-full w-full object-cover"
-            />
+            <img src={urls[i]} alt="" className="h-full w-full object-cover" />
             <button
               type="button"
               onClick={() => onRemove(i)}
@@ -320,7 +314,7 @@ export function VendorFormModal({
           <span className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
             Images
           </span>
-          <p className="mt-0.5 text-xs text-zinc-500">
+          {/* <p className="mt-0.5 text-xs text-zinc-500">
             Bucket{" "}
             <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">
               {VENDOR_IMAGES_BUCKET}
@@ -330,7 +324,7 @@ export function VendorFormModal({
               supabase/storage-setup.sql
             </code>{" "}
             in the Supabase SQL editor.
-          </p>
+          </p> */}
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {/*
               Overlay the real <input type="file"> on the visible control. Programmatic
@@ -356,7 +350,9 @@ export function VendorFormModal({
                 {newFiles.length} file{newFiles.length === 1 ? "" : "s"} staged
               </span>
             ) : (
-              <span className="text-sm text-zinc-500">No files staged yet</span>
+              <span className="text-sm text-zinc-500">
+                No Images chosen yet
+              </span>
             )}
           </div>
         </div>
