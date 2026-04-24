@@ -9,7 +9,6 @@ type ModalProps = {
   children: React.ReactNode;
   size?: "md" | "lg" | "xl";
 };
-
 const sizeClass = {
   md: "max-w-lg",
   lg: "max-w-2xl",
