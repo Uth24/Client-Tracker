@@ -75,6 +75,12 @@ function rangeLabel(start: Date, end: Date) {
   }
 }
 
+/** `day:m:YYYY-MM-DD` / `day:d:YYYY-MM-DD` — two calendars mount with one DnD context. */
+function parseDayDroppableId(overId: string): string | null {
+  const m = overId.match(/^day:[md]:(\d{4}-\d{2}-\d{2})$/);
+  return m ? m[1]! : null;
+}
+
 function statusColor(status: JobStatus | null | undefined) {
   switch (status) {
     case "completed":
@@ -91,17 +97,20 @@ function statusColor(status: JobStatus | null | undefined) {
 function DayCell({
   day,
   inMonth,
+  /** Must be unique per layout (two grids mount at once: mobile + desktop). */
+  droppableId,
   children,
 }: {
   day: string;
   inMonth: boolean;
+  droppableId: string;
   children: React.ReactNode;
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: `day:${day}` });
+  const { setNodeRef, isOver } = useDroppable({ id: droppableId });
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[120px] rounded-2xl border bg-white p-2 ring-1 ring-zinc-100 transition ${
+      className={`min-h-[120px] rounded-2xl border bg-white p-2 ring-1 ring-zinc-100 transition-[transform,box-shadow,ring-color] duration-150 ${
         inMonth ? "border-zinc-200" : "border-zinc-100 opacity-70"
       } ${isOver ? "scale-[1.01] ring-2 ring-sky-300/35 shadow-[0_16px_45px_rgba(2,132,199,0.12)]" : ""}`}
     >
@@ -125,17 +134,17 @@ function JobPill({
   });
 
   const style: React.CSSProperties | undefined = overlay
-    ? { transform: undefined, willChange: "transform", touchAction: "none" }
+    ? { transform: undefined, touchAction: "none" }
     : transform
       ? {
           transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
           willChange: "transform",
           touchAction: "none",
         }
-      : { willChange: "transform", touchAction: "none" };
+      : { touchAction: "manipulation" };
 
   const frame = overlay
-    ? "ring-0 shadow-xl border-zinc-100"
+    ? "ring-0 shadow-lg border-zinc-100"
     : "ring-1 border-zinc-200 shadow-sm";
 
   return (
@@ -149,9 +158,13 @@ function JobPill({
         e.stopPropagation();
         onClick();
       }}
-      className={`w-full cursor-grab rounded-xl border px-2 py-1 text-left text-xs font-semibold transition active:cursor-grabbing ${frame} ${statusColor(
+      className={`w-full cursor-grab rounded-xl border px-2 py-1 text-left text-xs font-semibold active:cursor-grabbing ${frame} ${statusColor(
         job.status,
-      )} ${isDragging && !overlay ? "opacity-0" : ""}`}
+      )} ${
+        isDragging && !overlay
+          ? "pointer-events-none opacity-0 [will-change:auto]"
+          : ""
+      }`}
       title={job.title ?? undefined}
     >
       <span className="block truncate">
@@ -281,11 +294,11 @@ export function CalendarBoard({ initialJobs }: Props) {
     const overId = e.over?.id ? String(e.over.id) : null;
     if (!overId) return;
     if (!activeId.startsWith("job:")) return;
-    if (!overId.startsWith("day:")) return;
+    const dayKey = parseDayDroppableId(overId);
+    if (!dayKey) return;
 
     const jobId = activeId.slice("job:".length);
-    const day = overId.slice("day:".length);
-    await setScheduledDate(jobId, day);
+    await setScheduledDate(jobId, dayKey);
   }
 
   return (
@@ -370,9 +383,14 @@ export function CalendarBoard({ initialJobs }: Props) {
         </div>
       </div>
 
-      {/* Mobile: agenda-style stacked days (no horizontal swipe). */}
-      <div className="sm:hidden">
-        <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+      {/*
+        Single DnD context for calendar + unscheduled: droppable day cells and
+        unscheduled draggables must share one DndContext (was broken when Unscheduled
+        was outside any context).
+      */}
+      <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+        {/* Mobile: agenda-style stacked days (no horizontal swipe). */}
+        <div className="sm:hidden">
           {days.length > mobilePageSize ? (
             <div className="flex items-center justify-between gap-2">
               <button
@@ -404,7 +422,7 @@ export function CalendarBoard({ initialJobs }: Props) {
             </div>
           ) : null}
 
-          <div className="space-y-3">
+          <div className="mt-3 space-y-3">
             {days.slice(mobilePageStart, mobilePageStart + mobilePageSize).map(({ date, key, inMonth }) => {
               const list = dayToJobs.get(key) ?? [];
               const display = list.slice(0, view === "month" ? 5 : 8);
@@ -414,7 +432,12 @@ export function CalendarBoard({ initialJobs }: Props) {
               const monthDay = date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
               return (
-                <DayCell key={key} day={key} inMonth={inMonth}>
+                <DayCell
+                  key={key}
+                  day={key}
+                  inMonth={inMonth}
+                  droppableId={`day:m:${key}`}
+                >
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
@@ -464,42 +487,33 @@ export function CalendarBoard({ initialJobs }: Props) {
               );
             })}
           </div>
+        </div>
 
-          <DragOverlay>
-            {activeJobId ? (
-              <div className="w-[320px]">
-                <JobPill
-                  job={jobs.find((j) => j.id === activeJobId) as Job}
-                  onClick={() => {}}
-                  overlay
-                />
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-      </div>
-
-      {/* Tablet/desktop: 7-column grid. */}
-      <div className="hidden sm:block">
-        <div className="-mx-6 overflow-x-auto px-6 lg:mx-0 lg:overflow-visible lg:px-0">
-          <div className={view === "month" ? "min-w-[980px] lg:min-w-0" : "min-w-[840px] lg:min-w-0"}>
-            <div className="grid grid-cols-7 gap-2">
-              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-                <div key={d} className="px-2 text-xs font-semibold text-zinc-500">
-                  {d}
-                </div>
-              ))}
-            </div>
-
-            <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+        {/* Tablet/desktop: 7-column grid. */}
+        <div className="mt-0 hidden sm:block">
+          <div className="-mx-6 overflow-x-auto px-6 lg:mx-0 lg:overflow-visible lg:px-0">
+            <div className={view === "month" ? "min-w-[980px] lg:min-w-0" : "min-w-[840px] lg:min-w-0"}>
               <div className="grid grid-cols-7 gap-2">
+                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
+                  <div key={d} className="px-2 text-xs font-semibold text-zinc-500">
+                    {d}
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-1 grid grid-cols-7 gap-2">
                 {days.map(({ date, key, inMonth }) => {
                   const list = dayToJobs.get(key) ?? [];
                   const display = list.slice(0, view === "month" ? 3 : 5);
                   const more = list.length - display.length;
                   const isToday = key === toISODate(new Date());
                   return (
-                    <DayCell key={key} day={key} inMonth={inMonth}>
+                    <DayCell
+                      key={key}
+                      day={key}
+                      inMonth={inMonth}
+                      droppableId={`day:d:${key}`}
+                    >
                       <div className="mb-2 flex items-center justify-between">
                         <span
                           className={`text-xs font-semibold ${
@@ -533,49 +547,49 @@ export function CalendarBoard({ initialJobs }: Props) {
                   );
                 })}
               </div>
-
-              <DragOverlay>
-                {activeJobId ? (
-                  <div className="w-[320px]">
-                    <JobPill
-                      job={jobs.find((j) => j.id === activeJobId) as Job}
-                      onClick={() => {}}
-                      overlay
-                    />
-                  </div>
-                ) : null}
-              </DragOverlay>
-            </DndContext>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="mt-6 rounded-3xl bg-white p-4 sm:p-5 ring-1 ring-zinc-200">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-zinc-900">Unscheduled</p>
-          <span className="rounded-full bg-zinc-50 px-2 py-0.5 text-xs font-semibold text-zinc-600 ring-1 ring-zinc-200">
-            {unscheduled.length}
-          </span>
+        <div className="mt-6 rounded-3xl bg-white p-4 sm:p-5 ring-1 ring-zinc-200">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-zinc-900">Unscheduled</p>
+            <span className="rounded-full bg-zinc-50 px-2 py-0.5 text-xs font-semibold text-zinc-600 ring-1 ring-zinc-200">
+              {unscheduled.length}
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-zinc-600">
+            Drag a job onto a day to schedule it.
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {unscheduled.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-6 text-center text-sm text-zinc-600">
+                No unscheduled jobs.
+              </div>
+            ) : (
+              unscheduled.map((j) => (
+                <JobPill
+                  key={j.id}
+                  job={j}
+                  onClick={() => setSelectedJobId(j.id)}
+                />
+              ))
+            )}
+          </div>
         </div>
-        <p className="mt-1 text-sm text-zinc-600">
-          Drag a job onto a day to schedule it.
-        </p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {unscheduled.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-6 text-center text-sm text-zinc-600">
-              No unscheduled jobs.
-            </div>
-          ) : (
-            unscheduled.map((j) => (
+
+        <DragOverlay dropAnimation={null} zIndex={1000}>
+          {activeJobId ? (
+            <div className="w-[320px]">
               <JobPill
-                key={j.id}
-                job={j}
-                onClick={() => setSelectedJobId(j.id)}
+                job={jobs.find((j) => j.id === activeJobId) as Job}
+                onClick={() => {}}
+                overlay
               />
-            ))
-          )}
-        </div>
-      </div>
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       <CalendarJobModal
         job={selectedJob}

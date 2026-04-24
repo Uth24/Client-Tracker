@@ -7,6 +7,7 @@ import type { Vendor } from "@/lib/types/vendors";
 import type { Job, JobStatus } from "@/lib/types/jobs";
 import { formatClientError } from "@/lib/format-error";
 import { Modal } from "@/components/ui/Modal";
+import { PortalSelect } from "@/components/ui/PortalSelect";
 
 type Props = {
   mode: "add" | "edit";
@@ -66,8 +67,8 @@ export function JobFormModal({
       setPrice(job.price === null || job.price === undefined ? "" : String(job.price));
       setScheduledDate(toDateInputValue(job.scheduled_date));
     } else {
-      setClientId(clients[0]?.id ?? "");
-      setVendorId(vendors[0]?.id ?? "");
+      setClientId("");
+      setVendorId("");
       setTitle("");
       setDescription("");
       setStatus("planned");
@@ -144,65 +145,40 @@ export function JobFormModal({
   const titleLabel = mode === "add" ? "New job" : "Edit job";
   const saveLabel = mode === "add" ? "Create job" : "Save";
 
+  const clientOptions = useMemo(
+    () => clients.map((c) => ({ value: c.id, label: c.name })),
+    [clients],
+  );
+  const vendorOptions = useMemo(
+    () => vendors.map((v) => ({ value: v.id, label: v.name })),
+    [vendors],
+  );
+
   return (
     <Modal open={open} onClose={onClose} title={titleLabel} size="xl">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label
-              htmlFor="job-client"
-              className="block text-sm font-medium text-zinc-700"
-            >
-              Client
-            </label>
-            <select
-              id="job-client"
-              required
-              value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
-            >
-              {clients.length === 0 ? (
-                <option value="" disabled>
-                  No clients yet
-                </option>
-              ) : (
-                clients.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))
-              )}
-            </select>
-          </div>
+          <PortalSelect
+            id="job-client"
+            label="Client"
+            value={clientId}
+            onChange={setClientId}
+            options={clientOptions}
+            placeholder="Select a client"
+            emptyMessage="No clients yet"
+            disabled={clients.length === 0}
+          />
 
-          <div>
-            <label
-              htmlFor="job-vendor"
-              className="block text-sm font-medium text-zinc-700"
-            >
-              Vendor
-            </label>
-            <select
-              id="job-vendor"
-              required
-              value={vendorId}
-              onChange={(e) => setVendorId(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
-            >
-              {vendors.length === 0 ? (
-                <option value="" disabled>
-                  No vendors yet
-                </option>
-              ) : (
-                vendors.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.name}
-                  </option>
-                ))
-              )}
-            </select>
-          </div>
+          <PortalSelect
+            id="job-vendor"
+            label="Vendor"
+            value={vendorId}
+            onChange={setVendorId}
+            options={vendorOptions}
+            placeholder="Select a vendor"
+            emptyMessage="No vendors yet"
+            disabled={vendors.length === 0}
+          />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">

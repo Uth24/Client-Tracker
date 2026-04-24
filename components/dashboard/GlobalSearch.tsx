@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -21,15 +22,6 @@ function isErrorWithMessage(e: unknown): e is { message: string } {
     "message" in e &&
     typeof (e as { message?: unknown }).message === "string"
   );
-}
-
-function useDebouncedValue<T>(value: T, delayMs: number) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const t = window.setTimeout(() => setDebounced(value), delayMs);
-    return () => window.clearTimeout(t);
-  }, [value, delayMs]);
-  return debounced;
 }
 
 export function GlobalSearch() {

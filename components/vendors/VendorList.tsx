@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
+import { TABLE_PAGE_SIZE } from "@/lib/pagination-constants";
+import { TablePagination } from "@/components/ui/TablePagination";
 import type { Vendor } from "@/lib/types/vendors";
 import { VendorDetailModal } from "@/components/vendors/VendorDetailModal";
 import { VendorFormModal } from "@/components/vendors/VendorFormModal";
@@ -15,34 +18,43 @@ function shortDescription(text: string | null, max = 80) {
 
 type Props = {
   initialVendors: Vendor[];
+  page: number;
+  totalCount: number;
+  searchQ: string;
 };
 
-export function VendorList({ initialVendors }: Props) {
+export function VendorList({
+  initialVendors,
+  page,
+  totalCount,
+  searchQ,
+}: Props) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [vendors, setVendors] = useState<Vendor[]>(initialVendors);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(searchQ);
   const [detailVendor, setDetailVendor] = useState<Vendor | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [editVendor, setEditVendor] = useState<Vendor | null>(null);
+  const debouncedSearch = useDebouncedValue(search, 400);
 
   useEffect(() => {
     setVendors(initialVendors);
   }, [initialVendors]);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return vendors;
-    return vendors.filter((v) => {
-      const name = v.name.toLowerCase();
-      const type = (v.type ?? "").toLowerCase();
-      const description = (v.description ?? "").toLowerCase();
-      return (
-        name.includes(q) ||
-        type.includes(q) ||
-        description.includes(q)
-      );
-    });
-  }, [vendors, search]);
+  useEffect(() => {
+    setSearch(searchQ);
+  }, [searchQ]);
+
+  useEffect(() => {
+    const next = debouncedSearch.trim();
+    if (next === (searchQ ?? "")) return;
+    const p = new URLSearchParams();
+    if (next) p.set("q", next);
+    p.set("page", "1");
+    router.push(`${pathname}?${p.toString()}`);
+  }, [debouncedSearch, searchQ, pathname, router]);
 
   async function handleDelete(v: Vendor) {
     if (
@@ -80,7 +92,9 @@ export function VendorList({ initialVendors }: Props) {
             type="search"
             placeholder="Search by name, type, or description…"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+            }}
             className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 pl-9 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
           />
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
@@ -99,14 +113,16 @@ export function VendorList({ initialVendors }: Props) {
       <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm ring-1 ring-zinc-100">
         {/* Mobile: card list (actions always visible). */}
         <div className="divide-y divide-zinc-100 sm:hidden">
-          {filtered.length === 0 ? (
+          {vendors.length === 0 ? (
             <div className="px-4 py-10 text-center text-zinc-500">
-              {vendors.length === 0
-                ? "No vendors yet. Add one to get started."
-                : "No vendors match your search."}
+              {totalCount === 0
+                ? searchQ
+                  ? "No vendors match your search."
+                  : "No vendors yet. Add one to get started."
+                : "No vendors on this page."}
             </div>
           ) : (
-            filtered.map((v) => (
+            vendors.map((v) => (
               <div
                 key={v.id}
                 className="cursor-pointer p-4 hover:bg-sky-50/60"
@@ -174,19 +190,21 @@ export function VendorList({ initialVendors }: Props) {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
-              {filtered.length === 0 ? (
+              {vendors.length === 0 ? (
                 <tr>
                   <td
                     colSpan={4}
                     className="px-4 py-10 text-center text-zinc-500"
                   >
-                    {vendors.length === 0
-                      ? "No vendors yet. Add one to get started."
-                      : "No vendors match your search."}
+                    {totalCount === 0
+                      ? searchQ
+                        ? "No vendors match your search."
+                        : "No vendors yet. Add one to get started."
+                      : "No vendors on this page."}
                   </td>
                 </tr>
               ) : (
-                filtered.map((v) => (
+                vendors.map((v) => (
                   <tr
                     key={v.id}
                     className="cursor-pointer hover:bg-sky-50/60"
@@ -234,6 +252,17 @@ export function VendorList({ initialVendors }: Props) {
             </tbody>
           </table>
         </div>
+        <TablePagination
+          page={page}
+          pageSize={TABLE_PAGE_SIZE}
+          total={totalCount}
+          buildPageHref={(p) => {
+            const n = new URLSearchParams();
+            if (searchParams.get("q")) n.set("q", searchParams.get("q")!);
+            n.set("page", String(p));
+            return `${pathname}?${n.toString()}`;
+          }}
+        />
       </div>
 
       <VendorDetailModal

@@ -1,14 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
+import { TABLE_PAGE_SIZE } from "@/lib/pagination-constants";
+import { TablePagination } from "@/components/ui/TablePagination";
 import type { Client } from "@/lib/types/clients";
 import { ClientDetailModal } from "@/components/clients/ClientDetailModal";
 import { ClientFormModal } from "@/components/clients/ClientFormModal";
 
 type Props = {
   initialClients: Client[];
+  page: number;
+  totalCount: number;
+  searchQ: string;
 };
 
 function formatLocation(c: Client) {
@@ -16,39 +22,38 @@ function formatLocation(c: Client) {
   return parts.length > 0 ? parts.join(", ") : "—";
 }
 
-export function ClientList({ initialClients }: Props) {
+export function ClientList({
+  initialClients,
+  page,
+  totalCount,
+  searchQ,
+}: Props) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [clients, setClients] = useState<Client[]>(initialClients);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(searchQ);
   const [detailClient, setDetailClient] = useState<Client | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [editClient, setEditClient] = useState<Client | null>(null);
+  const debouncedSearch = useDebouncedValue(search, 400);
 
   useEffect(() => {
     setClients(initialClients);
   }, [initialClients]);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return clients;
-    return clients.filter((c) => {
-      const name = c.name.toLowerCase();
-      const email = (c.email ?? "").toLowerCase();
-      const phone = (c.phone ?? "").toLowerCase();
-      const address = [
-        c.address_line1,
-        c.address_line2,
-        c.city,
-        c.state,
-        c.zip_code,
-      ]
-        .filter((x) => x?.trim())
-        .join(" ")
-        .toLowerCase();
-      const notes = (c.notes ?? "").toLowerCase();
-      return [name, email, phone, address, notes].some((t) => t.includes(q));
-    });
-  }, [clients, search]);
+  useEffect(() => {
+    setSearch(searchQ);
+  }, [searchQ]);
+
+  useEffect(() => {
+    const next = debouncedSearch.trim();
+    if (next === (searchQ ?? "")) return;
+    const p = new URLSearchParams();
+    if (next) p.set("q", next);
+    p.set("page", "1");
+    router.push(`${pathname}?${p.toString()}`);
+  }, [debouncedSearch, searchQ, pathname, router]);
 
   async function handleDelete(c: Client) {
     if (!confirm(`Delete client "${c.name}"? This cannot be undone.`)) return;
@@ -99,14 +104,16 @@ export function ClientList({ initialClients }: Props) {
       <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm ring-1 ring-zinc-100">
         {/* Mobile: card list (no horizontal swipe needed). */}
         <div className="divide-y divide-zinc-100 sm:hidden">
-          {filtered.length === 0 ? (
+          {clients.length === 0 ? (
             <div className="px-4 py-10 text-center text-zinc-500">
-              {clients.length === 0
-                ? "No clients yet. Add one to get started."
-                : "No clients match your search."}
+              {totalCount === 0
+                ? searchQ
+                  ? "No clients match your search."
+                  : "No clients yet. Add one to get started."
+                : "No clients on this page."}
             </div>
           ) : (
-            filtered.map((c) => (
+            clients.map((c) => (
               <div
                 key={c.id}
                 className="cursor-pointer p-4 hover:bg-sky-50/60"
@@ -175,19 +182,21 @@ export function ClientList({ initialClients }: Props) {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
-              {filtered.length === 0 ? (
+              {clients.length === 0 ? (
                 <tr>
                   <td
                     colSpan={4}
                     className="px-4 py-10 text-center text-zinc-500"
                   >
-                    {clients.length === 0
-                      ? "No clients yet. Add one to get started."
-                      : "No clients match your search."}
+                    {totalCount === 0
+                      ? searchQ
+                        ? "No clients match your search."
+                        : "No clients yet. Add one to get started."
+                      : "No clients on this page."}
                   </td>
                 </tr>
               ) : (
-                filtered.map((c) => (
+                clients.map((c) => (
                   <tr
                     key={c.id}
                     className="cursor-pointer hover:bg-sky-50/60"
@@ -234,6 +243,17 @@ export function ClientList({ initialClients }: Props) {
             </tbody>
           </table>
         </div>
+        <TablePagination
+          page={page}
+          pageSize={TABLE_PAGE_SIZE}
+          total={totalCount}
+          buildPageHref={(p) => {
+            const n = new URLSearchParams();
+            if (searchParams.get("q")) n.set("q", searchParams.get("q")!);
+            n.set("page", String(p));
+            return `${pathname}?${n.toString()}`;
+          }}
+        />
       </div>
 
       <ClientDetailModal
