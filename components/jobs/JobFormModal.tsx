@@ -151,7 +151,7 @@ export function JobFormModal({
           <div>
             <label
               htmlFor="job-client"
-              className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+              className="block text-sm font-medium text-zinc-700"
             >
               Client
             </label>
@@ -160,7 +160,7 @@ export function JobFormModal({
               required
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none focus:ring-2 focus:ring-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
             >
               {clients.length === 0 ? (
                 <option value="" disabled>
@@ -179,7 +179,7 @@ export function JobFormModal({
           <div>
             <label
               htmlFor="job-vendor"
-              className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+              className="block text-sm font-medium text-zinc-700"
             >
               Vendor
             </label>
@@ -188,7 +188,7 @@ export function JobFormModal({
               required
               value={vendorId}
               onChange={(e) => setVendorId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none focus:ring-2 focus:ring-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
             >
               {vendors.length === 0 ? (
                 <option value="" disabled>
@@ -209,7 +209,7 @@ export function JobFormModal({
           <div>
             <label
               htmlFor="job-title"
-              className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+              className="block text-sm font-medium text-zinc-700"
             >
               Title (optional)
             </label>
@@ -218,7 +218,7 @@ export function JobFormModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Pool cleaning"
-              className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none focus:ring-2 focus:ring-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
             />
           </div>
 
@@ -226,7 +226,7 @@ export function JobFormModal({
             <div>
               <label
                 htmlFor="job-status"
-                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                className="block text-sm font-medium text-zinc-700"
               >
                 Status
               </label>
@@ -234,7 +234,7 @@ export function JobFormModal({
                 id="job-status"
                 value={status}
                 onChange={(e) => setStatus(e.target.value as JobStatus)}
-                className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none focus:ring-2 focus:ring-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
               >
                 {statusOptions.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -247,7 +247,7 @@ export function JobFormModal({
             <div>
               <label
                 htmlFor="job-price"
-                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                className="block text-sm font-medium text-zinc-700"
               >
                 Price (optional)
               </label>
@@ -257,7 +257,7 @@ export function JobFormModal({
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="e.g. 250"
-                className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none focus:ring-2 focus:ring-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
               />
             </div>
           </div>
@@ -266,7 +266,7 @@ export function JobFormModal({
         <div>
           <label
             htmlFor="job-desc"
-            className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+            className="block text-sm font-medium text-zinc-700"
           >
             Description (optional)
           </label>
@@ -276,7 +276,7 @@ export function JobFormModal({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="What work is being done?"
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none focus:ring-2 focus:ring-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+            className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
           />
         </div>
 
@@ -284,7 +284,7 @@ export function JobFormModal({
           <div>
             <label
               htmlFor="job-scheduled-date"
-              className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+              className="block text-sm font-medium text-zinc-700"
             >
               Scheduled date (optional)
             </label>
@@ -293,10 +293,10 @@ export function JobFormModal({
               type="date"
               value={scheduledDate}
               onChange={(e) => setScheduledDate(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none focus:ring-2 focus:ring-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
             />
           </div>
-          <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800/40 dark:text-zinc-300">
+          <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600">
             This job connects a <span className="font-medium">client</span> to a{" "}
             <span className="font-medium">vendor</span> and tracks status over time.
           </div>
@@ -318,14 +318,14 @@ export function JobFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={saving || !canSubmit || clients.length === 0 || vendors.length === 0}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-700 disabled:opacity-50"
           >
             {saving ? "Saving…" : saveLabel}
           </button>

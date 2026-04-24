@@ -170,27 +170,31 @@ function JobCard({
   const prev = prevStatus(status);
   const next = nextStatus(status);
 
+  const cardFrame = overlay
+    ? "border-zinc-100 ring-0 shadow-xl"
+    : "border-zinc-200 ring-1 ring-zinc-100 shadow-sm";
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...(overlay ? {} : attributes)}
       {...(overlay ? {} : listeners)}
-      className={`rounded-xl border border-zinc-200 bg-white p-3 shadow-sm transition dark:border-zinc-800 dark:bg-zinc-900 ${
+      className={`rounded-2xl border bg-white p-3 transition ${cardFrame} ${
         isDragging && !overlay ? "opacity-0 shadow-none" : ""
       } cursor-grab active:cursor-grabbing`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+          <div className="truncate text-sm font-semibold text-zinc-900">
             {job.title?.trim() ? job.title : "Untitled job"}
           </div>
-          <div className="mt-0.5 truncate text-xs text-zinc-600 dark:text-zinc-400">
-            <span className="text-zinc-800 dark:text-zinc-200">
+          <div className="mt-0.5 truncate text-xs text-zinc-600">
+            <span className="text-zinc-900">
               {job.clients?.name ?? "—"}
             </span>
             <span className="text-zinc-500"> → </span>
-            <span className="text-zinc-700 dark:text-zinc-300">
+            <span className="text-zinc-700">
               {job.vendors?.name ?? "—"}
             </span>
           </div>
@@ -210,7 +214,7 @@ function JobCard({
           onClick={onEdit}
           onPointerDownCapture={(e) => e.stopPropagation()}
           disabled={dragging}
-          className="rounded-md border border-zinc-200 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          className="rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50 disabled:opacity-50"
         >
           Edit
         </button>
@@ -219,7 +223,7 @@ function JobCard({
           onClick={onDelete}
           onPointerDownCapture={(e) => e.stopPropagation()}
           disabled={dragging}
-          className="rounded-md border border-red-200 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
+          className="rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-50 disabled:opacity-50"
         >
           Delete
         </button>
@@ -230,7 +234,7 @@ function JobCard({
             disabled={!prev || dragging}
             onClick={() => prev && onMoveTo(prev)}
             onPointerDownCapture={(e) => e.stopPropagation()}
-            className="rounded-md border border-zinc-200 px-2 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            className="rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50 disabled:opacity-40"
           >
             ←
           </button>
@@ -239,7 +243,7 @@ function JobCard({
             disabled={!next || dragging}
             onClick={() => next && onMoveTo(next)}
             onPointerDownCapture={(e) => e.stopPropagation()}
-            className="rounded-md border border-zinc-200 px-2 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            className="rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50 disabled:opacity-40"
           >
             →
           </button>
@@ -406,7 +410,7 @@ export function JobList({ initialJobs, clients, vendors }: Props) {
           {columns.map(({ status, jobs: colJobs }) => (
             <ColumnDropZone key={status} id={`col:${status}`} status={status}>
               <div
-                className={`overflow-hidden rounded-2xl border bg-white dark:bg-zinc-950 ${statusMeta[status].borderClass}`}
+                className={`overflow-hidden rounded-3xl border bg-white shadow-sm ring-1 ring-zinc-100 ${statusMeta[status].borderClass}`}
               >
                 <div className={`${statusMeta[status].headerClass} px-4 py-3`}>
                   <div className="flex items-center justify-between">
@@ -421,7 +425,7 @@ export function JobList({ initialJobs, clients, vendors }: Props) {
 
                 <div className="space-y-3 p-3">
                   {colJobs.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-zinc-200 bg-white/50 p-6 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/40">
+                    <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-6 text-center text-sm text-zinc-500">
                       Drop a job here.
                     </div>
                   ) : (
@@ -444,7 +448,7 @@ export function JobList({ initialJobs, clients, vendors }: Props) {
 
         <DragOverlay>
           {activeJobId ? (
-            <div className="w-[320px]">
+            <div className="w-[340px]">
               <JobCard
                 job={jobs.find((j) => j.id === activeJobId) as Job}
                 dragging={true}

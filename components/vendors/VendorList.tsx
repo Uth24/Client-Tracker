@@ -81,7 +81,7 @@ export function VendorList({ initialVendors }: Props) {
             placeholder="Search by name, type, or description…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 pl-9 text-zinc-900 outline-none focus:ring-2 focus:ring-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+            className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 pl-9 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
           />
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
             ⌕
@@ -90,32 +90,32 @@ export function VendorList({ initialVendors }: Props) {
         <button
           type="button"
           onClick={() => setAddOpen(true)}
-          className="shrink-0 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          className="shrink-0 rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
         >
           Add vendor
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm ring-1 ring-zinc-100">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-left text-sm">
-            <thead className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-800/50">
+            <thead className="border-b border-zinc-200 bg-zinc-50">
               <tr>
-                <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-600">
                   Name
                 </th>
-                <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-600">
                   Type
                 </th>
-                <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-600">
                   Description
                 </th>
-                <th className="px-4 py-3 font-medium text-zinc-700 dark:text-zinc-300">
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-600">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+            <tbody className="divide-y divide-zinc-100">
               {filtered.length === 0 ? (
                 <tr>
                   <td
@@ -131,16 +131,22 @@ export function VendorList({ initialVendors }: Props) {
                 filtered.map((v) => (
                   <tr
                     key={v.id}
-                    className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/40"
+                    className="cursor-pointer hover:bg-sky-50/60"
                     onClick={() => setDetailVendor(v)}
                   >
-                    <td className="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-50">
+                    <td className="px-4 py-3 font-semibold text-zinc-900">
                       {v.name}
                     </td>
-                    <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
-                      {v.type?.trim() ? v.type : "—"}
+                    <td className="px-4 py-3 text-zinc-600">
+                      {v.type?.trim() ? (
+                        <span className="inline-flex items-center rounded-full bg-sky-600/10 px-2 py-0.5 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
+                          {v.type}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
                     </td>
-                    <td className="max-w-xs px-4 py-3 text-zinc-600 dark:text-zinc-400">
+                    <td className="max-w-xs px-4 py-3 text-zinc-600">
                       {shortDescription(v.description)}
                     </td>
                     <td className="px-4 py-3">
@@ -151,14 +157,14 @@ export function VendorList({ initialVendors }: Props) {
                         <button
                           type="button"
                           onClick={() => setEditVendor(v)}
-                          className="rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                          className="rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50"
                         >
                           Edit
                         </button>
                         <button
                           type="button"
                           onClick={() => handleDelete(v)}
-                          className="rounded-md border border-red-200 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/50"
+                          className="rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-50"
                         >
                           Delete
                         </button>

@@ -17,10 +17,10 @@ export function DashboardSidebar({ userEmail }: { userEmail: string }) {
   const pathname = usePathname();
 
   return (
-    <aside className="relative flex w-full shrink-0 flex-col border-b border-white/10 bg-zinc-950 md:w-60 md:border-r md:border-b-0">
-      <div className="pointer-events-none absolute inset-0 opacity-80">
-        <div className="absolute -left-20 top-10 h-72 w-72 rounded-full bg-fuchsia-600/20 blur-3xl" />
-        <div className="absolute -right-10 top-40 h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl" />
+    <aside className="relative flex w-full shrink-0 flex-col border-b border-zinc-900 bg-zinc-950 md:w-64 md:border-r md:border-b-0">
+      <div className="pointer-events-none absolute inset-0 opacity-70">
+        <div className="absolute -left-24 top-10 h-72 w-72 rounded-full bg-sky-600/20 blur-3xl" />
+        <div className="absolute -right-16 top-52 h-72 w-72 rounded-full bg-blue-700/10 blur-3xl" />
       </div>
 
       <div className="relative border-b border-white/10 px-5 py-5">

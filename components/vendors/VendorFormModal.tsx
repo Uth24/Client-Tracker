@@ -38,14 +38,14 @@ function PendingImageQueue({
 
   return (
     <div
-      className="rounded-xl border-2 border-dashed border-blue-300 bg-blue-50/80 p-4 dark:border-blue-700 dark:bg-blue-950/40"
+      className="rounded-2xl border-2 border-dashed border-sky-200 bg-sky-50 p-4"
       role="status"
       aria-live="polite"
     >
-      <p className="text-sm font-semibold text-blue-950 dark:text-blue-100">
+      <p className="text-sm font-semibold text-sky-900">
         {files.length} photo{files.length === 1 ? "" : "s"} ready to upload
       </p>
-      <p className="mt-1 text-xs leading-relaxed text-blue-900/85 dark:text-blue-200/90">
+      <p className="mt-1 text-xs leading-relaxed text-sky-900/80">
         Choosing files only stages them here. They are sent to Supabase Storage
         and saved to <span className="font-medium">vendor_images</span> when you
         click{" "}
@@ -55,14 +55,14 @@ function PendingImageQueue({
         {files.map((f, i) => (
           <div
             key={`${f.name}-${f.size}-${i}`}
-            className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100 shadow-sm dark:border-zinc-600 dark:bg-zinc-800"
+            className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 shadow-sm"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={urls[i]} alt="" className="h-full w-full object-cover" />
             <button
               type="button"
               onClick={() => onRemove(i)}
-              className="absolute right-1 top-1 rounded-md bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white hover:bg-black/80"
+              className="absolute right-1 top-1 rounded-lg bg-zinc-950/60 px-1.5 py-0.5 text-xs font-semibold text-white hover:bg-zinc-950/75"
             >
               Remove
             </button>
@@ -269,7 +269,7 @@ export function VendorFormModal({
         <div>
           <label
             htmlFor="vendor-name"
-            className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+            className="block text-sm font-medium text-zinc-700"
           >
             Name
           </label>
@@ -278,13 +278,13 @@ export function VendorFormModal({
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none focus:ring-2 focus:ring-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+            className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
           />
         </div>
         <div>
           <label
             htmlFor="vendor-type"
-            className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+            className="block text-sm font-medium text-zinc-700"
           >
             Type / category
           </label>
@@ -292,13 +292,13 @@ export function VendorFormModal({
             id="vendor-type"
             value={type}
             onChange={(e) => setType(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none focus:ring-2 focus:ring-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+            className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
           />
         </div>
         <div>
           <label
             htmlFor="vendor-desc"
-            className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+            className="block text-sm font-medium text-zinc-700"
           >
             Description
           </label>
@@ -307,11 +307,11 @@ export function VendorFormModal({
             rows={4}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none focus:ring-2 focus:ring-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+            className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
           />
         </div>
         <div>
-          <span className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <span className="block text-sm font-medium text-zinc-700">
             Images
           </span>
           {/* <p className="mt-0.5 text-xs text-zinc-500">
@@ -331,7 +331,7 @@ export function VendorFormModal({
               input.click() from a separate button is blocked or flaky in Safari and some
               browsers; a direct click on the input (even opacity-0) is treated as user intent.
             */}
-            <label className="relative inline-flex min-h-[42px] min-w-[132px] cursor-pointer items-center justify-center rounded-lg border border-zinc-300 bg-white px-4 py-2 shadow-sm hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800 dark:hover:bg-zinc-700">
+            <label className="relative inline-flex min-h-[42px] min-w-[132px] cursor-pointer items-center justify-center rounded-xl border border-zinc-200 bg-white px-4 py-2 shadow-sm ring-1 ring-zinc-100 hover:bg-zinc-50">
               <input
                 id={fileInputId}
                 type="file"
@@ -341,12 +341,12 @@ export function VendorFormModal({
                 className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
                 style={{ fontSize: 0 }}
               />
-              <span className="pointer-events-none text-sm font-medium text-zinc-800 dark:text-zinc-100">
+              <span className="pointer-events-none text-sm font-semibold text-zinc-800">
                 Choose files
               </span>
             </label>
             {newFiles.length > 0 ? (
-              <span className="text-sm font-medium text-green-700 dark:text-green-400">
+              <span className="text-sm font-semibold text-emerald-700">
                 {newFiles.length} file{newFiles.length === 1 ? "" : "s"} staged
               </span>
             ) : (
@@ -365,7 +365,7 @@ export function VendorFormModal({
 
         {mode === "edit" && existingImages.length > 0 ? (
           <div>
-            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            <p className="text-sm font-medium text-zinc-700">
               Current images (toggle to remove on save)
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -376,10 +376,10 @@ export function VendorFormModal({
                     key={img.id}
                     type="button"
                     onClick={() => toggleRemoveImage(img.id)}
-                    className={`relative h-16 w-24 overflow-hidden rounded-lg border-2 text-left ${
+                    className={`relative h-16 w-24 overflow-hidden rounded-xl border-2 text-left ${
                       marked
                         ? "border-red-500 opacity-50"
-                        : "border-zinc-200 dark:border-zinc-600"
+                        : "border-zinc-200"
                     }`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -410,14 +410,14 @@ export function VendorFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-700 disabled:opacity-50"
           >
             {saving ? "Saving…" : saveButtonLabel}
           </button>

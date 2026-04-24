@@ -16,7 +16,7 @@ export default async function DashboardLayout({
   if (!user) redirect("/login");
 
   return (
-    <div className="dark flex min-h-full flex-1 flex-col bg-zinc-950 md:flex-row">
+    <div className="flex min-h-full flex-1 flex-col bg-[var(--background)] md:flex-row">
       <DashboardSidebar userEmail={user.email ?? ""} />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <DashboardTopBar userEmail={user.email ?? ""} />
