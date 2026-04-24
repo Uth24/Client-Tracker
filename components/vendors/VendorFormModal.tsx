@@ -3,9 +3,9 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Vendor, VendorImage } from "@/lib/types/vendors";
-import { VENDOR_IMAGES_BUCKET } from "@/lib/constants";
 import { formatClientError } from "@/lib/format-error";
 import { uploadVendorImageFiles } from "@/lib/vendors/storage";
+import { SignedVendorImage } from "@/components/vendors/SignedVendorImage";
 import { Modal } from "@/components/ui/Modal";
 
 type Props = {
@@ -192,13 +192,13 @@ export function VendorFormModal({
 
         try {
           if (filesToUpload.length > 0) {
-            const urls = await uploadVendorImageFiles(
+            const paths = await uploadVendorImageFiles(
               supabase,
               user.id,
               row.id,
               filesToUpload,
             );
-            const rows = urls.map((image_url) => ({
+            const rows = paths.map((image_url) => ({
               vendor_id: row.id,
               user_id: user.id,
               image_url,
@@ -234,13 +234,13 @@ export function VendorFormModal({
         }
 
         if (filesToUpload.length > 0) {
-          const urls = await uploadVendorImageFiles(
+          const paths = await uploadVendorImageFiles(
             supabase,
             user.id,
             vendor.id,
             filesToUpload,
           );
-          const rows = urls.map((image_url) => ({
+          const rows = paths.map((image_url) => ({
             vendor_id: vendor.id,
             user_id: user.id,
             image_url,
@@ -380,11 +380,10 @@ export function VendorFormModal({
                         : "border-zinc-200"
                     }`}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={img.image_url}
-                      alt=""
-                      className="h-full w-full object-cover"
+                    <SignedVendorImage
+                      imageRef={img.image_url}
+                      className="h-full w-full"
+                      imgClassName="h-full w-full object-cover"
                     />
                     {marked ? (
                       <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-xs font-medium text-white">

@@ -2,6 +2,7 @@
 
 import type { Vendor } from "@/lib/types/vendors";
 import { Modal } from "@/components/ui/Modal";
+import { SignedVendorImage } from "@/components/vendors/SignedVendorImage";
 
 type Props = {
   vendor: Vendor | null;
@@ -53,20 +54,13 @@ export function VendorDetailModal({ vendor, open, onClose }: Props) {
           ) : (
             <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
               {images.map((img) => (
-                <a
+                <SignedVendorImage
                   key={img.id}
-                  href={img.image_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  imageRef={img.image_url}
+                  withLink
                   className="aspect-video overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={img.image_url}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                </a>
+                  imgClassName="h-full w-full object-cover"
+                />
               ))}
             </div>
           )}
