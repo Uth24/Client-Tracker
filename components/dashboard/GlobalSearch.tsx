@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Client } from "@/lib/types/clients";
 import type { Vendor } from "@/lib/types/vendors";
 import type { Job } from "@/lib/types/jobs";
+import { SearchHitsSkeleton, InlineSpinner } from "@/components/ui/Skeleton";
 
 type Result =
   | { kind: "client"; id: string; title: string; subtitle?: string; href: string }
@@ -70,6 +71,7 @@ export function GlobalSearch() {
       if (query.length < 2) {
         setResults([]);
         setError(null);
+        setLoading(false);
         return;
       }
 
@@ -183,6 +185,11 @@ export function GlobalSearch() {
                 placeholder="Search clients, vendors, and jobs…"
                 className="w-full bg-transparent text-sm text-zinc-900 outline-none placeholder:text-zinc-500"
               />
+              {loading && debouncedQ.trim().length >= 2 ? (
+                <span className="shrink-0" title="Loading">
+                  <InlineSpinner className="h-4 w-4" />
+                </span>
+              ) : null}
               <button
                 type="button"
                 onClick={() => setOpen(false)}
@@ -200,11 +207,7 @@ export function GlobalSearch() {
               </div>
             ) : null}
 
-            {loading ? (
-              <div className="rounded-2xl px-3 py-3 text-sm text-zinc-600">
-                Searching…
-              </div>
-            ) : null}
+            {loading && debouncedQ.trim().length >= 2 ? <SearchHitsSkeleton /> : null}
 
             {!loading && !error && debouncedQ.trim().length >= 2 && results.length === 0 ? (
               <div className="rounded-2xl px-3 py-3 text-sm text-zinc-600">
@@ -212,9 +215,13 @@ export function GlobalSearch() {
               </div>
             ) : null}
 
-            <ResultSection title="Clients" items={grouped.clients} onPick={() => setOpen(false)} />
-            <ResultSection title="Vendors" items={grouped.vendors} onPick={() => setOpen(false)} />
-            <ResultSection title="Jobs" items={grouped.jobs} onPick={() => setOpen(false)} />
+            {!loading ? (
+              <>
+                <ResultSection title="Clients" items={grouped.clients} onPick={() => setOpen(false)} />
+                <ResultSection title="Vendors" items={grouped.vendors} onPick={() => setOpen(false)} />
+                <ResultSection title="Jobs" items={grouped.jobs} onPick={() => setOpen(false)} />
+              </>
+            ) : null}
           </div>
         </div>
       ) : null}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { VENDOR_IMAGES_BUCKET } from "@/lib/constants";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { getSignedUrlForVendorImage, objectPathFromStoredImageRef } from "@/lib/vendors/storage";
 
 const SIGNED_TTL_SEC = 3600;
@@ -79,7 +80,7 @@ export function SignedVendorImage({
   if (!signed) {
     return (
       <div className={className}>
-        <div className={`animate-pulse bg-zinc-100 ${imgClassName}`} aria-hidden />
+        <Skeleton className={`h-full w-full min-h-[2.5rem] ${imgClassName}`} />
       </div>
     );
   }

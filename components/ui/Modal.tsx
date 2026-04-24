@@ -37,7 +37,7 @@ export function Modal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
-        className="absolute inset-0 bg-zinc-950/40"
+        className="absolute inset-0 bg-zinc-950/40 backdrop-blur-sm"
         aria-label="Close dialog"
         onClick={onClose}
       />
