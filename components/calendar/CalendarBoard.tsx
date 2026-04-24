@@ -357,96 +357,101 @@ export function CalendarBoard({ initialJobs }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-2">
-        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-          <div key={d} className="px-2 text-xs font-semibold text-zinc-500">
-            {d}
+      {/* Calendar grid: keep 7 columns readable on mobile via horizontal scroll */}
+      <div className="-mx-6 overflow-x-auto px-6 lg:mx-0 lg:overflow-visible lg:px-0">
+        <div className={view === "month" ? "min-w-[980px] lg:min-w-0" : "min-w-[840px] lg:min-w-0"}>
+          <div className="grid grid-cols-7 gap-2">
+            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
+              <div key={d} className="px-2 text-xs font-semibold text-zinc-500">
+                {d}
+              </div>
+            ))}
           </div>
-        ))}
+
+          <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+            <div className="grid grid-cols-7 gap-2">
+              {days.map(({ date, key, inMonth }) => {
+                const list = dayToJobs.get(key) ?? [];
+                const display = list.slice(0, view === "month" ? 3 : 5);
+                const more = list.length - display.length;
+                const isToday = key === toISODate(new Date());
+                return (
+                  <DayCell key={key} day={key} inMonth={inMonth}>
+                    <div className="mb-2 flex items-center justify-between">
+                      <span
+                        className={`text-xs font-semibold ${
+                          isToday ? "text-sky-700" : "text-zinc-700"
+                        }`}
+                      >
+                        {date.getDate()}
+                      </span>
+                      {isToday ? (
+                        <span className="rounded-full bg-sky-600/10 px-2 py-0.5 text-[11px] font-semibold text-sky-700 ring-1 ring-sky-200">
+                          today
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <div className="space-y-1">
+                      {display.map((j) => (
+                        <JobPill
+                          key={j.id}
+                          job={j}
+                          onClick={() => setSelectedJobId(j.id)}
+                        />
+                      ))}
+                      {more > 0 ? (
+                        <div className="rounded-xl bg-zinc-50 px-2 py-1 text-[11px] font-semibold text-zinc-600 ring-1 ring-zinc-200">
+                          +{more} more
+                        </div>
+                      ) : null}
+                    </div>
+                  </DayCell>
+                );
+              })}
+            </div>
+
+            <DragOverlay>
+              {activeJobId ? (
+                <div className="w-[320px]">
+                  <JobPill
+                    job={jobs.find((j) => j.id === activeJobId) as Job}
+                    onClick={() => {}}
+                    overlay
+                  />
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        </div>
       </div>
 
-      <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-7">
-          {days.map(({ date, key, inMonth }) => {
-            const list = dayToJobs.get(key) ?? [];
-            const display = list.slice(0, 3);
-            const more = list.length - display.length;
-            const isToday = key === toISODate(new Date());
-            return (
-              <DayCell key={key} day={key} inMonth={inMonth}>
-                <div className="mb-2 flex items-center justify-between">
-                  <span
-                    className={`text-xs font-semibold ${
-                      isToday ? "text-sky-700" : "text-zinc-700"
-                    }`}
-                  >
-                    {date.getDate()}
-                  </span>
-                  {isToday ? (
-                    <span className="rounded-full bg-sky-600/10 px-2 py-0.5 text-[11px] font-semibold text-sky-700 ring-1 ring-sky-200">
-                      today
-                    </span>
-                  ) : null}
-                </div>
-
-                <div className="space-y-1">
-                  {display.map((j) => (
-                    <JobPill
-                      key={j.id}
-                      job={j}
-                      onClick={() => setSelectedJobId(j.id)}
-                    />
-                  ))}
-                  {more > 0 ? (
-                    <div className="rounded-xl bg-zinc-50 px-2 py-1 text-[11px] font-semibold text-zinc-600 ring-1 ring-zinc-200">
-                      +{more} more
-                    </div>
-                  ) : null}
-                </div>
-              </DayCell>
-            );
-          })}
+      <div className="mt-6 rounded-3xl bg-white p-5 ring-1 ring-zinc-200">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold text-zinc-900">Unscheduled</p>
+          <span className="rounded-full bg-zinc-50 px-2 py-0.5 text-xs font-semibold text-zinc-600 ring-1 ring-zinc-200">
+            {unscheduled.length}
+          </span>
         </div>
-
-        <div className="mt-6 rounded-3xl bg-white p-5 ring-1 ring-zinc-200">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-zinc-900">Unscheduled</p>
-            <span className="rounded-full bg-zinc-50 px-2 py-0.5 text-xs font-semibold text-zinc-600 ring-1 ring-zinc-200">
-              {unscheduled.length}
-            </span>
-          </div>
-          <p className="mt-1 text-sm text-zinc-600">
-            Drag a job onto a day to schedule it.
-          </p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {unscheduled.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-6 text-center text-sm text-zinc-600">
-                No unscheduled jobs.
-              </div>
-            ) : (
-              unscheduled.map((j) => (
-                <JobPill
-                  key={j.id}
-                  job={j}
-                  onClick={() => setSelectedJobId(j.id)}
-                />
-              ))
-            )}
-          </div>
-        </div>
-
-        <DragOverlay>
-          {activeJobId ? (
-            <div className="w-[320px]">
-              <JobPill
-                job={jobs.find((j) => j.id === activeJobId) as Job}
-                onClick={() => {}}
-                overlay
-              />
+        <p className="mt-1 text-sm text-zinc-600">
+          Drag a job onto a day to schedule it.
+        </p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {unscheduled.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-6 text-center text-sm text-zinc-600">
+              No unscheduled jobs.
             </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+          ) : (
+            unscheduled.map((j) => (
+              <JobPill
+                key={j.id}
+                job={j}
+                onClick={() => setSelectedJobId(j.id)}
+              />
+            ))
+          )}
+        </div>
+      </div>
 
       <CalendarJobModal
         job={selectedJob}

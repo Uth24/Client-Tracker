@@ -406,44 +406,52 @@ export function JobList({ initialJobs, clients, vendors }: Props) {
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
       >
-        <div className="grid gap-6 lg:grid-cols-4">
-          {columns.map(({ status, jobs: colJobs }) => (
-            <ColumnDropZone key={status} id={`col:${status}`} status={status}>
+        {/* Mobile: horizontal scroll (columns stay readable). Desktop: grid. */}
+        <div className="-mx-6 overflow-x-auto px-6 lg:mx-0 lg:overflow-visible lg:px-0">
+          <div className="flex gap-4 pb-2 lg:grid lg:grid-cols-4 lg:gap-6 lg:pb-0">
+            {columns.map(({ status, jobs: colJobs }) => (
               <div
-                className={`overflow-hidden rounded-3xl border bg-white shadow-sm ring-1 ring-zinc-100 ${statusMeta[status].borderClass}`}
+                key={status}
+                className="w-[320px] shrink-0 lg:w-auto lg:shrink"
               >
-                <div className={`${statusMeta[status].headerClass} px-4 py-3`}>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-white">
-                      {statusMeta[status].label}
-                    </p>
-                    <span className="rounded-full bg-white/15 px-2 py-0.5 text-xs font-semibold text-white">
-                      {colJobs.length}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="space-y-3 p-3">
-                  {colJobs.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-6 text-center text-sm text-zinc-500">
-                      Drop a job here.
+                <ColumnDropZone id={`col:${status}`} status={status}>
+                  <div
+                    className={`overflow-hidden rounded-3xl border bg-white shadow-sm ring-1 ring-zinc-100 ${statusMeta[status].borderClass}`}
+                  >
+                    <div className={`${statusMeta[status].headerClass} px-4 py-3`}>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-white">
+                          {statusMeta[status].label}
+                        </p>
+                        <span className="rounded-full bg-white/15 px-2 py-0.5 text-xs font-semibold text-white">
+                          {colJobs.length}
+                        </span>
+                      </div>
                     </div>
-                  ) : (
-                    colJobs.map((j) => (
-                      <JobCard
-                        key={j.id}
-                        job={j}
-                        dragging={draggingId !== null}
-                        onEdit={() => setEditJob(j)}
-                        onDelete={() => handleDelete(j)}
-                        onMoveTo={(next) => setJobStatus(j.id, next)}
-                      />
-                    ))
-                  )}
-                </div>
+
+                    <div className="space-y-3 p-3">
+                      {colJobs.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-6 text-center text-sm text-zinc-500">
+                          Drop a job here.
+                        </div>
+                      ) : (
+                        colJobs.map((j) => (
+                          <JobCard
+                            key={j.id}
+                            job={j}
+                            dragging={draggingId !== null}
+                            onEdit={() => setEditJob(j)}
+                            onDelete={() => handleDelete(j)}
+                            onMoveTo={(next) => setJobStatus(j.id, next)}
+                          />
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </ColumnDropZone>
               </div>
-            </ColumnDropZone>
-          ))}
+            ))}
+          </div>
         </div>
 
         <DragOverlay>
