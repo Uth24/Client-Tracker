@@ -97,7 +97,65 @@ export function VendorList({ initialVendors }: Props) {
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm ring-1 ring-zinc-100">
-        <div className="overflow-x-auto">
+        {/* Mobile: card list (actions always visible). */}
+        <div className="divide-y divide-zinc-100 sm:hidden">
+          {filtered.length === 0 ? (
+            <div className="px-4 py-10 text-center text-zinc-500">
+              {vendors.length === 0
+                ? "No vendors yet. Add one to get started."
+                : "No vendors match your search."}
+            </div>
+          ) : (
+            filtered.map((v) => (
+              <div
+                key={v.id}
+                className="cursor-pointer p-4 hover:bg-sky-50/60"
+                onClick={() => setDetailVendor(v)}
+              >
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-zinc-900">
+                    {v.name}
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    {v.type?.trim() ? (
+                      <span className="inline-flex items-center rounded-full bg-sky-600/10 px-2 py-0.5 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
+                        {v.type}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-zinc-500">—</span>
+                    )}
+                  </div>
+                  <div className="mt-2 text-xs text-zinc-600">
+                    {shortDescription(v.description, 120)}
+                  </div>
+                </div>
+
+                <div
+                  className="mt-3 flex flex-col gap-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setEditVendor(v)}
+                    className="w-full rounded-lg bg-white px-3 py-2 text-sm font-semibold text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(v)}
+                    className="w-full rounded-lg bg-white px-3 py-2 text-sm font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-50"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop/tablet: table view. */}
+        <div className="hidden overflow-x-auto sm:block">
           <table className="w-full min-w-[640px] text-left text-sm">
             <thead className="border-b border-zinc-200 bg-zinc-50">
               <tr>

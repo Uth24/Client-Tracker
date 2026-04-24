@@ -406,13 +406,12 @@ export function JobList({ initialJobs, clients, vendors }: Props) {
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
       >
-        {/* Mobile: horizontal scroll (columns stay readable). Desktop: grid. */}
-        <div className="-mx-6 overflow-x-auto px-6 lg:mx-0 lg:overflow-visible lg:px-0">
-          <div className="flex gap-4 pb-2 lg:grid lg:grid-cols-4 lg:gap-6 lg:pb-0">
+        {/* Mobile: stack stages vertically. Larger screens: multi-column grid. */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
             {columns.map(({ status, jobs: colJobs }) => (
               <div
                 key={status}
-                className="w-[320px] shrink-0 lg:w-auto lg:shrink"
+                className="min-w-0"
               >
                 <ColumnDropZone id={`col:${status}`} status={status}>
                   <div
@@ -451,7 +450,6 @@ export function JobList({ initialJobs, clients, vendors }: Props) {
                 </ColumnDropZone>
               </div>
             ))}
-          </div>
         </div>
 
         <DragOverlay>

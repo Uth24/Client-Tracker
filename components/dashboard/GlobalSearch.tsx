@@ -13,6 +13,15 @@ type Result =
   | { kind: "vendor"; id: string; title: string; subtitle?: string; href: string }
   | { kind: "job"; id: string; title: string; subtitle?: string; href: string };
 
+function isErrorWithMessage(e: unknown): e is { message: string } {
+  return (
+    typeof e === "object" &&
+    e !== null &&
+    "message" in e &&
+    typeof (e as { message?: unknown }).message === "string"
+  );
+}
+
 function useDebouncedValue<T>(value: T, delayMs: number) {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
@@ -128,10 +137,7 @@ export function GlobalSearch() {
 
         setResults(next);
       } catch (e: unknown) {
-        const msg =
-          typeof e === "object" && e && "message" in e && typeof (e as any).message === "string"
-            ? (e as any).message
-            : "Search failed";
+        const msg = isErrorWithMessage(e) ? e.message : "Search failed";
         setError(msg);
         setResults([]);
       } finally {
