@@ -36,7 +36,7 @@ export function LoginForm() {
     } else {
       localStorage.removeItem("client-track-remember");
     }
-    router.push("/vendors");
+    router.push("/dashboard");
     router.refresh();
   }
 

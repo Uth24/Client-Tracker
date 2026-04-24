@@ -4,8 +4,8 @@ import { type NextRequest, NextResponse } from "next/server";
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const nextRaw = url.searchParams.get("next") ?? "/vendors";
-  const next = nextRaw.startsWith("/") ? nextRaw : "/vendors";
+  const nextRaw = url.searchParams.get("next") ?? "/dashboard";
+  const next = nextRaw.startsWith("/") ? nextRaw : "/dashboard";
 
   if (code) {
     const redirectUrl = new URL(next, url.origin);

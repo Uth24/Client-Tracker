@@ -27,7 +27,7 @@ export function SignupForm() {
       setError(signError.message);
       return;
     }
-    router.push("/vendors");
+    router.push("/dashboard");
     router.refresh();
   }
 
