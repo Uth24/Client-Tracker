@@ -38,7 +38,7 @@ export function ClientDetailModal({ client, open, onClose }: Props) {
             <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
               Email
             </p>
-            <p className="mt-1 text-zinc-800 dark:text-zinc-200">
+            <p className="mt-1 text-zinc-800">
               {client.email?.trim() ? client.email : "—"}
             </p>
           </div>
@@ -46,7 +46,7 @@ export function ClientDetailModal({ client, open, onClose }: Props) {
             <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
               Phone
             </p>
-            <p className="mt-1 text-zinc-800 dark:text-zinc-200">
+            <p className="mt-1 text-zinc-800">
               {client.phone?.trim() ? client.phone : "—"}
             </p>
           </div>
@@ -56,7 +56,7 @@ export function ClientDetailModal({ client, open, onClose }: Props) {
           <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
             Address
           </p>
-          <p className="mt-1 whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">
+          <p className="mt-1 whitespace-pre-wrap text-zinc-800">
             {address.trim() ? address : "—"}
           </p>
         </div>
@@ -65,7 +65,7 @@ export function ClientDetailModal({ client, open, onClose }: Props) {
           <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
             Notes
           </p>
-          <p className="mt-1 whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">
+          <p className="mt-1 whitespace-pre-wrap text-zinc-800">
             {client.notes?.trim() ? client.notes : "—"}
           </p>
         </div>

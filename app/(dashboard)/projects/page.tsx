@@ -28,10 +28,8 @@ export default async function ProjectsPage() {
   if (loadError) {
     return (
       <div>
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
-          Projects
-        </h1>
-        <p className="mt-2 text-red-600 dark:text-red-400">
+        <h1 className="text-2xl font-semibold text-zinc-900">Projects</h1>
+        <p className="mt-2 text-red-600">
           Could not load projects: {loadError.message}
         </p>
       </div>
@@ -50,10 +48,8 @@ export default async function ProjectsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
-        Projects
-      </h1>
-      <p className="mt-1 text-zinc-600 dark:text-zinc-400">
+      <h1 className="text-2xl font-semibold text-zinc-900">Projects</h1>
+      <p className="mt-1 text-zinc-600">
         Track work vendors are doing for clients. Create a job to connect a client
         to a vendor.
       </p>

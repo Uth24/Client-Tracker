@@ -316,11 +316,9 @@ export function VendorFormModal({
           </span>
           {/* <p className="mt-0.5 text-xs text-zinc-500">
             Bucket{" "}
-            <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">
-              {VENDOR_IMAGES_BUCKET}
-            </code>
+            <code className="rounded bg-zinc-100 px-1">{VENDOR_IMAGES_BUCKET}</code>
             . If upload fails, run{" "}
-            <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">
+            <code className="rounded bg-zinc-100 px-1">
               supabase/storage-setup.sql
             </code>{" "}
             in the Supabase SQL editor.
@@ -401,12 +399,12 @@ export function VendorFormModal({
         ) : null}
 
         {error ? (
-          <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+          <p className="text-sm text-red-600" role="alert">
             {error}
           </p>
         ) : null}
 
-        <div className="flex justify-end gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-700">
+        <div className="flex justify-end gap-2 border-t border-zinc-200 pt-4">
           <button
             type="button"
             onClick={onClose}

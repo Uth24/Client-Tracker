@@ -9,7 +9,7 @@ const nav = [
   { href: "/vendors", label: "Vendors", placeholder: false, icon: UsersIcon },
   { href: "/clients", label: "Clients", placeholder: false, icon: PeopleIcon },
   { href: "/projects", label: "Projects", placeholder: false, icon: FolderIcon },
-  { href: "/calendar", label: "Calendar", placeholder: true, icon: CalendarIcon },
+  { href: "/calendar", label: "Calendar", placeholder: false, icon: CalendarIcon },
   { href: "/settings", label: "Settings", placeholder: true, icon: SettingsIcon },
 ] as const;
 

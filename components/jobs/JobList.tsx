@@ -83,6 +83,26 @@ function formatDateLabel(job: Job) {
   }
 }
 
+function formatIsoAsDate(iso: string) {
+  try {
+    return new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" });
+  } catch {
+    return iso;
+  }
+}
+
+function formatScheduled(scheduledDate: string | null) {
+  if (!scheduledDate?.trim()) return "Unscheduled";
+  // `scheduled_date` is a YYYY-MM-DD string.
+  try {
+    return new Date(`${scheduledDate}T00:00:00`).toLocaleDateString(undefined, {
+      dateStyle: "medium",
+    });
+  } catch {
+    return scheduledDate;
+  }
+}
+
 function shortText(text: string | null, max = 70) {
   if (!text?.trim()) return "—";
   const t = text.trim();
@@ -201,10 +221,22 @@ function JobCard({
         </div>
       </div>
 
-      <div className="mt-2 text-xs text-zinc-500">
-        {formatDateLabel(job)}
+      <div className="mt-2 space-y-1 text-xs text-zinc-500">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span>
+            <span className="font-semibold text-zinc-600">Created:</span>{" "}
+            {formatIsoAsDate(job.created_at)}
+          </span>
+          <span className="text-zinc-300">•</span>
+          <span>
+            <span className="font-semibold text-zinc-600">Scheduled:</span>{" "}
+            {formatScheduled(job.scheduled_date)}
+          </span>
+        </div>
         {job.description?.trim() ? (
-          <span className="text-zinc-400"> • {shortText(job.description, 80)}</span>
+          <div className="text-zinc-500">
+            {shortText(job.description, 80)}
+          </div>
         ) : null}
       </div>
 
@@ -256,7 +288,6 @@ function JobCard({
 export function JobList({ initialJobs, clients, vendors }: Props) {
   const router = useRouter();
   const [jobs, setJobs] = useState<Job[]>(initialJobs);
-  const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [editJob, setEditJob] = useState<Job | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -270,20 +301,6 @@ export function JobList({ initialJobs, clients, vendors }: Props) {
     setJobs(initialJobs);
   }, [initialJobs]);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return jobs;
-    return jobs.filter((j) => {
-      const client = j.clients?.name ?? "";
-      const vendor = j.vendors?.name ?? "";
-      const title = j.title ?? "";
-      const desc = j.description ?? "";
-      return [client, vendor, title, desc].some((t) =>
-        t.toLowerCase().includes(q),
-      );
-    });
-  }, [jobs, search]);
-
   const grouped = useMemo(() => {
     const map: Record<JobStatus, Job[]> = {
       planned: [],
@@ -292,7 +309,7 @@ export function JobList({ initialJobs, clients, vendors }: Props) {
       completed: [],
     };
 
-    for (const j of filtered) {
+    for (const j of jobs) {
       const s = statusFromUnknown(j.status);
       (map[s] ?? map.planned).push(j);
     }
@@ -306,7 +323,7 @@ export function JobList({ initialJobs, clients, vendors }: Props) {
     }
 
     return map;
-  }, [filtered]);
+  }, [jobs]);
 
   async function handleDelete(job: Job) {
     const who = `${job.clients?.name ?? "Client"} → ${job.vendors?.name ?? "Vendor"}`;
@@ -375,29 +392,12 @@ export function JobList({ initialJobs, clients, vendors }: Props) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative max-w-md flex-1">
-          <label htmlFor="job-search" className="sr-only">
-            Search jobs
-          </label>
-          <input
-            id="job-search"
-            type="search"
-            placeholder="Search by client, vendor, title, or description…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 pl-9 text-zinc-900 outline-none focus:ring-2 focus:ring-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
-          />
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
-            ⌕
-          </span>
-        </div>
-
         <button
           type="button"
           onClick={() => setAddOpen(true)}
-          className="shrink-0 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          className="shrink-0 cursor-pointer rounded-xl bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-200 focus:ring-offset-2 focus:ring-offset-[var(--background)]"
         >
-          New job
+          + New job
         </button>
       </div>
 

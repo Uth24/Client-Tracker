@@ -32,7 +32,7 @@ export function VendorDetailModal({ vendor, open, onClose }: Props) {
           <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
             Type of work
           </p>
-          <p className="mt-0.5 text-zinc-900 dark:text-zinc-100">
+          <p className="mt-0.5 text-zinc-900">
             {vendor.type?.trim() ? vendor.type : "—"}
           </p>
         </div>
@@ -40,7 +40,7 @@ export function VendorDetailModal({ vendor, open, onClose }: Props) {
           <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
             Description
           </p>
-          <p className="mt-1 whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">
+          <p className="mt-1 whitespace-pre-wrap text-zinc-800">
             {vendor.description?.trim() ? vendor.description : "No description."}
           </p>
         </div>
@@ -58,7 +58,7 @@ export function VendorDetailModal({ vendor, open, onClose }: Props) {
                   href={img.image_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="aspect-video overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800"
+                  className="aspect-video overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img

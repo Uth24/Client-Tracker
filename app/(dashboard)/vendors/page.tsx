@@ -12,10 +12,8 @@ export default async function VendorsPage() {
   if (error) {
     return (
       <div>
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
-          Vendors
-        </h1>
-        <p className="mt-2 text-red-600 dark:text-red-400">
+        <h1 className="text-2xl font-semibold text-zinc-900">Vendors</h1>
+        <p className="mt-2 text-red-600">
           Could not load vendors: {error.message}
         </p>
       </div>
@@ -33,10 +31,8 @@ export default async function VendorsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
-        Vendors
-      </h1>
-      <p className="mt-1 text-zinc-600 dark:text-zinc-400">
+      <h1 className="text-2xl font-semibold text-zinc-900">Vendors</h1>
+      <p className="mt-1 text-zinc-600">
         Search by name, job type, or description. Click a row to view details.
       </p>
       <div className="mt-8">
