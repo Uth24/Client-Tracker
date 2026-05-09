@@ -7,6 +7,7 @@ import { SignOutButton } from "@/components/dashboard/SignOutButton";
 const nav = [
   { href: "/dashboard", label: "Dashboard", placeholder: false, icon: DashboardIcon },
   { href: "/vendors", label: "Vendors", placeholder: false, icon: UsersIcon },
+  { href: "/leads", label: "Leads", placeholder: false, icon: LeadsIcon },
   { href: "/clients", label: "Clients", placeholder: false, icon: PeopleIcon },
   { href: "/projects", label: "Projects", placeholder: false, icon: FolderIcon },
   { href: "/calendar", label: "Calendar", placeholder: false, icon: CalendarIcon },
@@ -131,6 +132,23 @@ function UsersIcon({ className }: { className?: string }) {
       />
       <path
         d="M16.5 13.75c2.6 0 4.9 1.7 5.4 4.53a.75.75 0 0 1-.74.88h-3.06a8.77 8.77 0 0 0-2.12-4.83c.17-.38.33-.58.52-.58Z"
+        fill="currentColor"
+        opacity="0.55"
+      />
+    </svg>
+  );
+}
+
+function LeadsIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <path
+        d="M12 3.25a4 4 0 1 1 0 8 4 4 0 0 1 0-8ZM4.5 20.25c.75-4 4.05-6.5 7.75-6.5 1.15 0 2.24.18 3.25.5a8.25 8.25 0 0 1 7.5-4.75 8.2 8.2 0 0 1 3.5.78c.45.2.75.64.75 1.12v.55a.75.75 0 0 1-.75.75H4.99a.75.75 0 0 1-.74-.88Z"
+        fill="currentColor"
+        opacity="0.9"
+      />
+      <path
+        d="M18.5 8.25a2.75 2.75 0 1 0 0-5.5 2.75 2.75 0 0 0 0 5.5Z"
         fill="currentColor"
         opacity="0.55"
       />

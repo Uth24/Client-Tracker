@@ -3,12 +3,12 @@
 import {
   VENDOR_RELATIONSHIP_LABEL,
   VENDOR_RELATIONSHIP_STATUSES,
-  type VendorRelationshipStatus,
+  type VendorRelationshipListTab,
 } from "@/lib/types/vendors";
 
 type Props = {
-  value: VendorRelationshipStatus;
-  onChange: (next: VendorRelationshipStatus) => void;
+  value: VendorRelationshipListTab;
+  onChange: (next: VendorRelationshipListTab) => void;
   /** e.g. "Partnership Status" — legend text when `hideLegend` is false; also used for aria-label on the control */
   ariaLabel: string;
   disabled?: boolean;
@@ -22,14 +22,41 @@ type Props = {
 };
 
 const tabShellClass =
-  "flex flex-wrap gap-1 rounded-xl border border-zinc-200 bg-zinc-50 p-1 shadow-sm ring-1 ring-zinc-100";
+  "flex flex-wrap gap-1.5 rounded-2xl border border-zinc-200/90 bg-zinc-100/90 p-1.5 shadow-inner shadow-zinc-200/40 ring-1 ring-zinc-200/60";
 
-const tabButtonClass = (active: boolean, disabled?: boolean) =>
-  `min-h-[40px] flex-1 rounded-lg px-3 py-2 text-center text-sm font-semibold transition-colors sm:flex-none sm:px-4 ${
-    active
-      ? "bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200"
-      : "text-zinc-600 hover:bg-white/60 hover:text-zinc-900"
+const tabButtonBase =
+  "min-h-[42px] flex-1 rounded-xl px-3 py-2 text-center text-sm font-semibold transition-all duration-150 sm:flex-none sm:px-4";
+
+function activeTabSurfaceClass(rel: VendorRelationshipListTab): string {
+  switch (rel) {
+    case "all":
+      return "bg-indigo-600 text-white shadow-md shadow-indigo-900/25 ring-2 ring-indigo-500/90 ring-offset-2 ring-offset-zinc-100";
+    case "worked_with":
+      return "bg-emerald-600 text-white shadow-md shadow-emerald-900/25 ring-2 ring-emerald-500/90 ring-offset-2 ring-offset-zinc-100";
+    case "not_working_with":
+      return "bg-rose-600 text-white shadow-md shadow-rose-900/25 ring-2 ring-rose-500/90 ring-offset-2 ring-offset-zinc-100";
+    default:
+      return "bg-amber-500 text-amber-950 shadow-md shadow-amber-900/20 ring-2 ring-amber-400/90 ring-offset-2 ring-offset-zinc-100";
+  }
+}
+
+function listTabLabel(rel: VendorRelationshipListTab): string {
+  if (rel === "all") return "All";
+  return VENDOR_RELATIONSHIP_LABEL[rel];
+}
+
+function tabButtonClass(
+  rel: VendorRelationshipListTab,
+  active: boolean,
+  disabled?: boolean,
+) {
+  const inactive =
+    "text-zinc-600 hover:bg-white hover:text-zinc-900 hover:shadow-sm ring-1 ring-transparent hover:ring-zinc-200/90";
+  const activeCls = activeTabSurfaceClass(rel);
+  return `${tabButtonBase} ${
+    active ? activeCls : inactive
   } ${disabled ? "pointer-events-none opacity-50" : ""}`;
+}
 
 export function VendorPartnershipSegmented({
   value,
@@ -40,9 +67,13 @@ export function VendorPartnershipSegmented({
   hideLegend,
 }: Props) {
   if (hideLegend) {
+    const tabs: VendorRelationshipListTab[] = [
+      "all",
+      ...VENDOR_RELATIONSHIP_STATUSES,
+    ];
     return (
       <div className={tabShellClass} role="tablist" aria-label={ariaLabel}>
-        {VENDOR_RELATIONSHIP_STATUSES.map((rel) => {
+        {tabs.map((rel) => {
           const active = value === rel;
           return (
             <button
@@ -52,9 +83,9 @@ export function VendorPartnershipSegmented({
               aria-selected={active}
               disabled={disabled}
               onClick={() => onChange(rel)}
-              className={tabButtonClass(active, disabled)}
+              className={tabButtonClass(rel, active, disabled)}
             >
-              {VENDOR_RELATIONSHIP_LABEL[rel]}
+              {listTabLabel(rel)}
             </button>
           );
         })}
@@ -82,9 +113,9 @@ export function VendorPartnershipSegmented({
               aria-checked={active}
               disabled={disabled}
               onClick={() => onChange(rel)}
-              className={tabButtonClass(active, disabled)}
+              className={tabButtonClass(rel, active, disabled)}
             >
-              {VENDOR_RELATIONSHIP_LABEL[rel]}
+              {listTabLabel(rel)}
             </button>
           );
         })}

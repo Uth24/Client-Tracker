@@ -2,16 +2,31 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { VendorList } from "@/components/vendors/VendorList";
 import {
-  isVendorRelationshipStatus,
-  type VendorRelationshipStatus,
+  type VendorRelationshipListTab,
+  isVendorRelationshipListTab,
 } from "@/lib/types/vendors";
 import { TABLE_PAGE_SIZE } from "@/lib/pagination-constants";
 import { normalizeTableSearchQ } from "@/lib/search-query";
 import { fetchVendorListPage } from "@/lib/vendors/fetch-vendor-list-page";
+import { parseServiceFilterParam } from "@/lib/vendors/parse-service-filter-param";
+import { parseWebsitePresenceParam } from "@/lib/vendors/website-presence-filter";
 
-type Sp = { page?: string; q?: string; relationship?: string };
+type Sp = {
+  page?: string;
+  q?: string;
+  relationship?: string;
+  services?: string;
+  has_website?: string;
+};
 
-const DEFAULT_RELATIONSHIP: VendorRelationshipStatus = "havent_worked_with";
+const DEFAULT_RELATIONSHIP_TAB: VendorRelationshipListTab = "all";
+
+function parseRelationshipListTab(
+  raw: string | undefined,
+): VendorRelationshipListTab {
+  if (raw && isVendorRelationshipListTab(raw)) return raw;
+  return DEFAULT_RELATIONSHIP_TAB;
+}
 
 export default async function VendorsPage({
   searchParams,
@@ -24,15 +39,21 @@ export default async function VendorsPage({
   const requested = Math.max(1, parseInt(String(sp.page ?? "1"), 10) || 1);
   const relationshipRaw =
     typeof sp.relationship === "string" ? sp.relationship : undefined;
-  const relationship: VendorRelationshipStatus =
-    relationshipRaw && isVendorRelationshipStatus(relationshipRaw)
-      ? relationshipRaw
-      : DEFAULT_RELATIONSHIP;
+  const relationship = parseRelationshipListTab(relationshipRaw);
+
+  const serviceOptionIds = parseServiceFilterParam(
+    typeof sp.services === "string" ? sp.services : undefined,
+  );
+  const websitePresence = parseWebsitePresenceParam(
+    typeof sp.has_website === "string" ? sp.has_website : undefined,
+  );
 
   const { vendors, total, error } = await fetchVendorListPage(supabase, {
     relationship,
     q,
     page: requested,
+    serviceOptionIds,
+    websitePresence,
   });
 
   if (error) {
@@ -50,6 +71,10 @@ export default async function VendorsPage({
     const p = new URLSearchParams();
     if (q) p.set("q", q);
     p.set("relationship", relationship);
+    if (serviceOptionIds.length > 0) p.set("services", serviceOptionIds.join(","));
+    if (websitePresence !== "any") {
+      p.set("has_website", websitePresence === "yes" ? "yes" : "no");
+    }
     p.set("page", String(maxPage));
     redirect(`/vendors?${p.toString()}`);
   }
@@ -59,9 +84,9 @@ export default async function VendorsPage({
     <div>
       <h1 className="text-2xl font-semibold text-zinc-900">Vendors</h1>
       <p className="mt-1 text-zinc-600">
-        Use the tabs to filter by relationship, search by name or type, and
-        click a row for details. Set each vendor&apos;s relationship when adding
-        or editing.
+        Use <span className="font-medium text-zinc-800">All</span> or a
+        partnership tab to narrow the list, pick services, search by name,
+        type, or website, filter by site presence, and click a row for details.
       </p>
       <div className="mt-8">
         <VendorList
@@ -70,6 +95,8 @@ export default async function VendorsPage({
           totalCount={total}
           searchQ={q}
           relationship={relationship}
+          serviceFilterIds={serviceOptionIds}
+          websiteFilter={websitePresence}
         />
       </div>
     </div>

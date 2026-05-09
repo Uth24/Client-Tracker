@@ -6,10 +6,13 @@ import {
   type Vendor,
   type VendorImage,
   type VendorRelationshipStatus,
-  sortVendorImages,
+  type VendorServiceOption,
+  sortVendorRow,
 } from "@/lib/types/vendors";
 import { formatClientError } from "@/lib/format-error";
+import { replaceVendorServices } from "@/lib/vendors/replace-vendor-services";
 import { uploadVendorImageFiles } from "@/lib/vendors/storage";
+import { VENDOR_ROW_SELECT } from "@/lib/vendors/vendor-query-select";
 import { SignedVendorImage } from "@/components/vendors/SignedVendorImage";
 import { VendorPartnershipSegmented } from "@/components/vendors/VendorPartnershipSegmented";
 import { Modal } from "@/components/ui/Modal";
@@ -29,6 +32,23 @@ type Props = {
   onClose: () => void;
   onSaved: (payload: VendorFormSavePayload) => void;
 };
+
+function mergeServiceCatalog(
+  fetched: VendorServiceOption[],
+  vendor: Vendor | null,
+): VendorServiceOption[] {
+  const map = new Map<string, VendorServiceOption>();
+  for (const o of fetched) map.set(o.id, o);
+  if (vendor?.vendor_services) {
+    for (const link of vendor.vendor_services) {
+      const opt = link.vendor_service_options;
+      if (opt?.id) map.set(opt.id, opt);
+    }
+  }
+  return [...map.values()].sort((a, b) =>
+    a.label.localeCompare(b.label, undefined, { sensitivity: "base" }),
+  );
+}
 
 /** Local previews + clear copy: files are not uploaded until the form is saved. */
 function PendingImageQueue({
@@ -100,8 +120,20 @@ export function VendorFormModal({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState("");
+  const [website, setWebsite] = useState("");
   const [relationshipStatus, setRelationshipStatus] =
     useState<VendorRelationshipStatus>("havent_worked_with");
+  const [serviceCatalog, setServiceCatalog] = useState<VendorServiceOption[]>(
+    [],
+  );
+  const [selectedServiceIds, setSelectedServiceIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [newServiceLabel, setNewServiceLabel] = useState("");
+  const [serviceAddInputOpen, setServiceAddInputOpen] = useState(false);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [addingService, setAddingService] = useState(false);
+  const newServiceInputRef = useRef<HTMLInputElement>(null);
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState<VendorImage[]>([]);
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
@@ -140,19 +172,130 @@ export function VendorFormModal({
       setName(vendor.name);
       setDescription(vendor.description ?? "");
       setType(vendor.type ?? "");
+      setWebsite(vendor.website?.trim() ?? "");
       setRelationshipStatus(vendor.relationship_status ?? "havent_worked_with");
       relationshipAtOpenRef.current =
         vendor.relationship_status ?? "havent_worked_with";
       setExistingImages([...(vendor.vendor_images ?? [])]);
+      setSelectedServiceIds(
+        new Set(
+          (vendor.vendor_services ?? [])
+            .map((l) => l.service_option_id)
+            .filter(Boolean),
+        ),
+      );
     } else {
       setName("");
       setDescription("");
       setType("");
+      setWebsite("");
       setRelationshipStatus("havent_worked_with");
       setExistingImages([]);
+      setSelectedServiceIds(new Set());
     }
+    setNewServiceLabel("");
+    setServiceAddInputOpen(false);
+
+    void (async () => {
+      setCatalogLoading(true);
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setCatalogLoading(false);
+        return;
+      }
+      const { data, error } = await supabase
+        .from("vendor_service_options")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("label");
+      if (error) {
+        setCatalogLoading(false);
+        return;
+      }
+      const base = (data ?? []) as VendorServiceOption[];
+      const merged =
+        mode === "edit" && vendor
+          ? mergeServiceCatalog(base, vendor)
+          : base;
+      setServiceCatalog(merged);
+      setCatalogLoading(false);
+    })();
     /* vendor?.id: re-run when switching edit target; entered is false if already open with same transition. */
   }, [open, mode, vendor?.id]);
+
+  useEffect(() => {
+    if (!open || !serviceAddInputOpen) return;
+    const t = window.setTimeout(() => newServiceInputRef.current?.focus(), 0);
+    return () => window.clearTimeout(t);
+  }, [open, serviceAddInputOpen]);
+
+  function toggleServiceSelection(optionId: string) {
+    setSelectedServiceIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(optionId)) next.delete(optionId);
+      else next.add(optionId);
+      return next;
+    });
+  }
+
+  async function handleAddServiceOption() {
+    const label = newServiceLabel.trim().replace(/\s+/g, " ");
+    if (!label || addingService) return;
+    setAddingService(true);
+    setError(null);
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setError("You must be signed in.");
+        return;
+      }
+      const { data: created, error } = await supabase
+        .from("vendor_service_options")
+        .insert({ user_id: user.id, label })
+        .select("*")
+        .single();
+      if (error) {
+        const code = (error as { code?: string }).code;
+        if (code === "23505") {
+          const { data: existing } = await supabase
+            .from("vendor_service_options")
+            .select("*")
+            .eq("user_id", user.id)
+            .eq("label", label)
+            .maybeSingle();
+          if (existing) {
+            setServiceCatalog((prev) =>
+              mergeServiceCatalog([...prev, existing], null),
+            );
+            setSelectedServiceIds((prev) => new Set(prev).add(existing.id));
+            setNewServiceLabel("");
+            setServiceAddInputOpen(false);
+            return;
+          }
+        }
+        throw error;
+      }
+      if (created) {
+        const opt = created as VendorServiceOption;
+        setServiceCatalog((prev) =>
+          mergeServiceCatalog([...prev, opt], null),
+        );
+        setSelectedServiceIds((prev) => new Set(prev).add(opt.id));
+        setNewServiceLabel("");
+        setServiceAddInputOpen(false);
+      }
+    } catch (err: unknown) {
+      setError(formatClientError(err));
+    } finally {
+      setAddingService(false);
+    }
+  }
 
   function toggleRemoveImage(id: string) {
     setRemovedIds((prev) => {
@@ -207,6 +350,7 @@ export function VendorFormModal({
             name: name.trim(),
             description: description.trim() || null,
             type: type.trim() || null,
+            website: website.trim() || null,
             relationship_status: relationshipStatus,
           })
           .select("id")
@@ -233,6 +377,7 @@ export function VendorFormModal({
               .insert(rows);
             if (imgErr) throw imgErr;
           }
+          await replaceVendorServices(supabase, row.id, [...selectedServiceIds]);
         } catch (imgFlowErr) {
           await supabase.from("vendors").delete().eq("id", row.id);
           throw imgFlowErr;
@@ -240,7 +385,7 @@ export function VendorFormModal({
 
         const { data: fullRow, error: loadErr } = await supabase
           .from("vendors")
-          .select("*, vendor_images(*)")
+          .select(VENDOR_ROW_SELECT)
           .eq("id", row.id)
           .single();
 
@@ -249,7 +394,7 @@ export function VendorFormModal({
 
         onSaved({
           mode: "add",
-          vendor: sortVendorImages(fullRow as Vendor),
+          vendor: sortVendorRow(fullRow as Vendor),
         });
       } else if (vendor) {
         const { error: upErr } = await supabase
@@ -258,6 +403,7 @@ export function VendorFormModal({
             name: name.trim(),
             description: description.trim() || null,
             type: type.trim() || null,
+            website: website.trim() || null,
             relationship_status: relationshipStatus,
           })
           .eq("id", vendor.id);
@@ -291,16 +437,18 @@ export function VendorFormModal({
           if (imgErr) throw imgErr;
         }
 
+        await replaceVendorServices(supabase, vendor.id, [...selectedServiceIds]);
+
         const { data: fullRow, error: loadErr } = await supabase
           .from("vendors")
-          .select("*, vendor_images(*)")
+          .select(VENDOR_ROW_SELECT)
           .eq("id", vendor.id)
           .single();
 
         if (loadErr) throw loadErr;
         if (!fullRow) throw new Error("Could not load vendor after save");
 
-        const updated = sortVendorImages(fullRow as Vendor);
+        const updated = sortVendorRow(fullRow as Vendor);
         const newRel = updated.relationship_status ?? "havent_worked_with";
         const partnershipStatusChanged =
           newRel !== relationshipAtOpenRef.current;
@@ -323,8 +471,8 @@ export function VendorFormModal({
   const title = mode === "add" ? "Add vendor" : "Edit vendor";
 
   return (
-    <Modal open={open} onClose={onClose} title={title} size="lg">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <Modal open={open} onClose={onClose} title={title} size="2xl">
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div>
           <label
             htmlFor="vendor-name"
@@ -340,23 +488,156 @@ export function VendorFormModal({
             className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
           />
         </div>
-        <div>
+
+        <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50/50 p-4 shadow-sm ring-1 ring-zinc-100/80">
           <label
             htmlFor="vendor-type"
-            className="block text-sm font-medium text-zinc-700"
+            className="block text-sm font-medium text-zinc-800"
           >
             Type / category
           </label>
+          <p className="mt-0.5 text-xs text-zinc-500">
+            The vendor&apos;s main bucket (e.g. contractor, property manager).
+            Specific work types go under Services offered below.
+          </p>
           <input
             id="vendor-type"
             value={type}
             onChange={(e) => setType(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
+            className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
           />
         </div>
+
+        <div>
+          <label
+            htmlFor="vendor-website"
+            className="block text-sm font-medium text-zinc-700"
+          >
+            Company website
+          </label>
+          <p className="mt-0.5 text-xs text-zinc-500">
+            Optional. Paste a full URL or just the domain (e.g.{" "}
+            <span className="font-mono text-zinc-600">acme.com</span>).
+          </p>
+          <input
+            id="vendor-website"
+            type="text"
+            inputMode="url"
+            autoComplete="url"
+            value={website}
+            onChange={(e) => setWebsite(e.target.value)}
+            placeholder="https://example.com"
+            className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
+          />
+        </div>
+
+        <div className="rounded-2xl border border-sky-100 bg-sky-50/35 p-4 shadow-sm ring-1 ring-sky-100/60">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="text-sm font-semibold text-zinc-900">
+              Services Offered
+            </h3>
+            {catalogLoading ? (
+              <span className="text-xs text-zinc-500">Loading…</span>
+            ) : null}
+          </div>
+          <div
+            className="mt-3 flex max-h-[11.5rem] flex-wrap content-start gap-2 overflow-y-auto"
+            role="group"
+            aria-label="Services offered"
+          >
+            {catalogLoading ? null : serviceCatalog.length === 0 ? (
+              <p className="text-sm text-zinc-500">
+                No services yet—use{" "}
+                <span className="font-medium text-zinc-700">+ Add Service</span>{" "}
+                to create your first chip.
+              </p>
+            ) : (
+              serviceCatalog.map((opt) => {
+                const on = selectedServiceIds.has(opt.id);
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    aria-pressed={on}
+                    disabled={saving}
+                    onClick={() => toggleServiceSelection(opt.id)}
+                    className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                      on
+                        ? "bg-sky-600 text-white shadow-sm ring-1 ring-sky-700/30 hover:bg-sky-700"
+                        : "bg-white text-zinc-700 ring-1 ring-zinc-200/90 hover:bg-zinc-50 hover:ring-zinc-300"
+                    } disabled:pointer-events-none disabled:opacity-50`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })
+            )}
+            {!catalogLoading ? (
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() =>
+                  setServiceAddInputOpen((v) => {
+                    const next = !v;
+                    if (v) setNewServiceLabel("");
+                    return next;
+                  })
+                }
+                className="rounded-full border border-dashed border-zinc-300 bg-white/80 px-3.5 py-1.5 text-sm font-medium text-zinc-600 hover:border-sky-300 hover:bg-sky-50/80 hover:text-sky-800 disabled:opacity-50"
+              >
+                + Add Service
+              </button>
+            ) : null}
+          </div>
+          {serviceAddInputOpen ? (
+            <div className="mt-3 space-y-1.5">
+              <div className="flex min-w-0 items-center gap-2">
+                <input
+                  ref={newServiceInputRef}
+                  id="vendor-new-service"
+                  type="text"
+                  value={newServiceLabel}
+                  onChange={(e) => setNewServiceLabel(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void handleAddServiceOption();
+                    }
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      setNewServiceLabel("");
+                      setServiceAddInputOpen(false);
+                    }
+                  }}
+                  placeholder="Type a service name…"
+                  disabled={saving || addingService}
+                  className="min-w-0 flex-1 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-300"
+                  aria-label="New service name — press Enter to add"
+                />
+                {addingService ? (
+                  <span className="shrink-0 text-xs text-zinc-500">Saving…</span>
+                ) : null}
+              </div>
+              <p className="text-xs text-zinc-500">
+                Press{" "}
+                <kbd className="rounded bg-zinc-200/90 px-1 py-0.5 font-mono text-[10px] font-semibold text-zinc-800">
+                  Enter
+                </kbd>{" "}
+                to add this service.{" "}
+                <kbd className="rounded bg-zinc-200/90 px-1 py-0.5 font-mono text-[10px] font-semibold text-zinc-800">
+                  Esc
+                </kbd>{" "}
+                to cancel.
+              </p>
+            </div>
+          ) : null}
+        </div>
+
         <VendorPartnershipSegmented
           value={relationshipStatus}
-          onChange={setRelationshipStatus}
+          onChange={(next) => {
+            if (next !== "all") setRelationshipStatus(next);
+          }}
           ariaLabel="Partnership Status"
           disabled={saving}
           hint={
@@ -384,15 +665,6 @@ export function VendorFormModal({
           <span className="block text-sm font-medium text-zinc-700">
             Images
           </span>
-          {/* <p className="mt-0.5 text-xs text-zinc-500">
-            Bucket{" "}
-            <code className="rounded bg-zinc-100 px-1">{VENDOR_IMAGES_BUCKET}</code>
-            . If upload fails, run{" "}
-            <code className="rounded bg-zinc-100 px-1">
-              supabase/storage-setup.sql
-            </code>{" "}
-            in the Supabase SQL editor.
-          </p> */}
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {/*
               Overlay the real <input type="file"> on the visible control. Programmatic
@@ -418,9 +690,7 @@ export function VendorFormModal({
                 {newFiles.length} file{newFiles.length === 1 ? "" : "s"} staged
               </span>
             ) : (
-              <span className="text-sm text-zinc-500">
-                No Images chosen yet
-              </span>
+              <span className="text-sm text-zinc-500">No files chosen yet</span>
             )}
           </div>
         </div>

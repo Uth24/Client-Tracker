@@ -30,6 +30,7 @@ export default async function DashboardPage() {
 
   const [
     clientsCountRes,
+    leadsCountRes,
     vendorsCountRes,
     jobsPendingRes,
     jobsInProcessRes,
@@ -38,6 +39,7 @@ export default async function DashboardPage() {
     recentJobsRes,
   ] = await Promise.all([
     supabase.from("clients").select("id", { count: "exact", head: true }),
+    supabase.from("leads").select("id", { count: "exact", head: true }),
     supabase.from("vendors").select("id", { count: "exact", head: true }),
     supabase
       .from("jobs")
@@ -64,6 +66,7 @@ export default async function DashboardPage() {
 
   const anyErr =
     clientsCountRes.error ??
+    leadsCountRes.error ??
     vendorsCountRes.error ??
     jobsPendingRes.error ??
     jobsInProcessRes.error ??
@@ -89,6 +92,7 @@ export default async function DashboardPage() {
           <p className="mt-3 text-sm text-zinc-600">
             If this is a Row Level Security issue, ensure you have SELECT policies
             on <span className="font-semibold text-zinc-800">clients</span>,{" "}
+            <span className="font-semibold text-zinc-800">leads</span>,{" "}
             <span className="font-semibold text-zinc-800">vendors</span>, and{" "}
             <span className="font-semibold text-zinc-800">jobs</span> for
             authenticated users.
@@ -99,6 +103,7 @@ export default async function DashboardPage() {
   }
 
   const clientsCount = clientsCountRes.count ?? 0;
+  const leadsCount = leadsCountRes.count ?? 0;
   const vendorsCount = vendorsCountRes.count ?? 0;
   const pendingCount = jobsPendingRes.count ?? 0;
   const inProcessCount = jobsInProcessRes.count ?? 0;
@@ -139,7 +144,7 @@ export default async function DashboardPage() {
             Welcome back, <span className="font-semibold">{displayName}</span>.
           </p>
           <p className="mt-1 text-sm text-zinc-600">
-            Quick overview of your clients, vendors, and projects.
+            Quick overview of your clients, leads, vendors, and projects.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -155,30 +160,41 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard
           label="Clients"
           value={String(clientsCount)}
           hint="People hiring vendors"
           tone="blue"
+          href="/clients"
+        />
+        <StatCard
+          label="Leads"
+          value={String(leadsCount)}
+          hint="Prospects you are tracking"
+          tone="blue"
+          href="/leads"
         />
         <StatCard
           label="Vendors"
           value={String(vendorsCount)}
           hint="Service providers"
           tone="blue"
+          href="/vendors"
         />
         <StatCard
           label="Active projects"
           value={String(activeProjects)}
           hint="In process / on hold"
           tone="blue"
+          href="/projects"
         />
         <StatCard
           label="Finished"
           value={String(finishedCount)}
           hint="Completed jobs"
           tone="blue"
+          href="/projects"
         />
       </div>
 
@@ -256,16 +272,18 @@ function StatCard({
   value,
   hint,
   tone,
+  href,
 }: {
   label: string;
   value: string;
   hint: string;
   tone?: "blue";
+  href?: string;
 }) {
   const accent =
     tone === "blue" ? "bg-sky-600/10 text-sky-700 ring-sky-200" : "bg-zinc-100";
-  return (
-    <div className="rounded-3xl bg-white p-5 ring-1 ring-zinc-200">
+  const inner = (
+    <>
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold tracking-[0.18em] text-zinc-500">
@@ -280,8 +298,18 @@ function StatCard({
           {label}
         </span>
       </div>
-    </div>
+    </>
   );
+  const cardClass =
+    "rounded-3xl bg-white p-5 ring-1 ring-zinc-200 transition hover:bg-zinc-50/80 hover:ring-zinc-300";
+  if (href) {
+    return (
+      <Link href={href} className={`block ${cardClass} focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400`}>
+        {inner}
+      </Link>
+    );
+  }
+  return <div className={cardClass}>{inner}</div>;
 }
 
 function ActivityRow({

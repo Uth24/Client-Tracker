@@ -10,6 +10,13 @@ type Props = {
   onClose: () => void;
 };
 
+function websiteHref(raw: string): string {
+  const t = raw.trim();
+  if (!t) return "";
+  if (/^https?:\/\//i.test(t)) return t;
+  return `https://${t}`;
+}
+
 function formatDate(iso: string) {
   try {
     return new Date(iso).toLocaleString(undefined, {
@@ -48,6 +55,51 @@ export function VendorDetailModal({ vendor, open, onClose }: Props) {
           <p className="mt-0.5 text-zinc-900">
             {vendor.type?.trim() ? vendor.type : "—"}
           </p>
+        </div>
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            Company website
+          </p>
+          {vendor.website?.trim() ? (
+            <a
+              href={websiteHref(vendor.website)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 inline-flex max-w-full items-center gap-1 break-all text-sm font-semibold text-sky-700 underline decoration-sky-300 underline-offset-2 hover:text-sky-900"
+            >
+              {vendor.website.trim()}
+              <span className="shrink-0 text-xs font-normal text-zinc-400">
+                ↗
+              </span>
+            </a>
+          ) : (
+            <p className="mt-0.5 text-zinc-600">—</p>
+          )}
+        </div>
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            Services offered
+          </p>
+          {(() => {
+            const links = (vendor.vendor_services ?? []).filter(
+              (l) => l.vendor_service_options?.label?.trim(),
+            );
+            if (links.length === 0) {
+              return <p className="mt-0.5 text-zinc-600">—</p>;
+            }
+            return (
+              <ul className="mt-2 flex flex-wrap gap-2">
+                {links.map((l) => (
+                  <li
+                    key={l.service_option_id}
+                    className="rounded-full bg-sky-600/10 px-3 py-1 text-sm font-medium text-sky-900 ring-1 ring-sky-200"
+                  >
+                    {l.vendor_service_options!.label}
+                  </li>
+                ))}
+              </ul>
+            );
+          })()}
         </div>
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
