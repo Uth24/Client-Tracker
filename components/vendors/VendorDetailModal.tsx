@@ -1,6 +1,6 @@
 "use client";
 
-import type { Vendor } from "@/lib/types/vendors";
+import { VENDOR_RELATIONSHIP_LABEL, type Vendor } from "@/lib/types/vendors";
 import { Modal } from "@/components/ui/Modal";
 import { SignedVendorImage } from "@/components/vendors/SignedVendorImage";
 
@@ -31,6 +31,18 @@ export function VendorDetailModal({ vendor, open, onClose }: Props) {
       <div className="space-y-4">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            Relationship
+          </p>
+          <p className="mt-0.5 text-zinc-900">
+            {
+              VENDOR_RELATIONSHIP_LABEL[
+                vendor.relationship_status ?? "havent_worked_with"
+              ]
+            }
+          </p>
+        </div>
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
             Type of work
           </p>
           <p className="mt-0.5 text-zinc-900">
@@ -42,7 +54,9 @@ export function VendorDetailModal({ vendor, open, onClose }: Props) {
             Description
           </p>
           <p className="mt-1 whitespace-pre-wrap text-zinc-800">
-            {vendor.description?.trim() ? vendor.description : "No description."}
+            {vendor.description?.trim()
+              ? vendor.description
+              : "No description."}
           </p>
         </div>
         <div>

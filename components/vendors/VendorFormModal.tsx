@@ -2,18 +2,32 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { Vendor, VendorImage } from "@/lib/types/vendors";
+import {
+  type Vendor,
+  type VendorImage,
+  type VendorRelationshipStatus,
+  sortVendorImages,
+} from "@/lib/types/vendors";
 import { formatClientError } from "@/lib/format-error";
 import { uploadVendorImageFiles } from "@/lib/vendors/storage";
 import { SignedVendorImage } from "@/components/vendors/SignedVendorImage";
+import { VendorPartnershipSegmented } from "@/components/vendors/VendorPartnershipSegmented";
 import { Modal } from "@/components/ui/Modal";
+
+export type VendorFormSavePayload =
+  | { mode: "add"; vendor: Vendor }
+  | {
+      mode: "edit";
+      vendor: Vendor;
+      partnershipStatusChanged: boolean;
+    };
 
 type Props = {
   mode: "add" | "edit";
   vendor?: Vendor | null;
   open: boolean;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (payload: VendorFormSavePayload) => void;
 };
 
 /** Local previews + clear copy: files are not uploaded until the form is saved. */
@@ -86,6 +100,8 @@ export function VendorFormModal({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState("");
+  const [relationshipStatus, setRelationshipStatus] =
+    useState<VendorRelationshipStatus>("havent_worked_with");
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState<VendorImage[]>([]);
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
@@ -96,6 +112,10 @@ export function VendorFormModal({
   const wasOpenRef = useRef(false);
   /** Always matches staged files — submit reads this so uploads never use a stale empty array. */
   const newFilesRef = useRef<File[]>([]);
+  /** Partnership when edit modal opened (detect changes on save). */
+  const relationshipAtOpenRef = useRef<VendorRelationshipStatus>(
+    "havent_worked_with",
+  );
 
   const saveButtonLabel = mode === "add" ? "Add vendor" : "Save";
 
@@ -120,11 +140,15 @@ export function VendorFormModal({
       setName(vendor.name);
       setDescription(vendor.description ?? "");
       setType(vendor.type ?? "");
+      setRelationshipStatus(vendor.relationship_status ?? "havent_worked_with");
+      relationshipAtOpenRef.current =
+        vendor.relationship_status ?? "havent_worked_with";
       setExistingImages([...(vendor.vendor_images ?? [])]);
     } else {
       setName("");
       setDescription("");
       setType("");
+      setRelationshipStatus("havent_worked_with");
       setExistingImages([]);
     }
     /* vendor?.id: re-run when switching edit target; entered is false if already open with same transition. */
@@ -183,8 +207,9 @@ export function VendorFormModal({
             name: name.trim(),
             description: description.trim() || null,
             type: type.trim() || null,
+            relationship_status: relationshipStatus,
           })
-          .select()
+          .select("id")
           .single();
 
         if (insErr) throw insErr;
@@ -212,6 +237,20 @@ export function VendorFormModal({
           await supabase.from("vendors").delete().eq("id", row.id);
           throw imgFlowErr;
         }
+
+        const { data: fullRow, error: loadErr } = await supabase
+          .from("vendors")
+          .select("*, vendor_images(*)")
+          .eq("id", row.id)
+          .single();
+
+        if (loadErr) throw loadErr;
+        if (!fullRow) throw new Error("Could not load new vendor");
+
+        onSaved({
+          mode: "add",
+          vendor: sortVendorImages(fullRow as Vendor),
+        });
       } else if (vendor) {
         const { error: upErr } = await supabase
           .from("vendors")
@@ -219,6 +258,7 @@ export function VendorFormModal({
             name: name.trim(),
             description: description.trim() || null,
             type: type.trim() || null,
+            relationship_status: relationshipStatus,
           })
           .eq("id", vendor.id);
 
@@ -250,9 +290,28 @@ export function VendorFormModal({
             .insert(rows);
           if (imgErr) throw imgErr;
         }
+
+        const { data: fullRow, error: loadErr } = await supabase
+          .from("vendors")
+          .select("*, vendor_images(*)")
+          .eq("id", vendor.id)
+          .single();
+
+        if (loadErr) throw loadErr;
+        if (!fullRow) throw new Error("Could not load vendor after save");
+
+        const updated = sortVendorImages(fullRow as Vendor);
+        const newRel = updated.relationship_status ?? "havent_worked_with";
+        const partnershipStatusChanged =
+          newRel !== relationshipAtOpenRef.current;
+
+        onSaved({
+          mode: "edit",
+          vendor: updated,
+          partnershipStatusChanged,
+        });
       }
 
-      onSaved();
       onClose();
     } catch (err: unknown) {
       setError(formatClientError(err));
@@ -295,6 +354,17 @@ export function VendorFormModal({
             className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
           />
         </div>
+        <VendorPartnershipSegmented
+          value={relationshipStatus}
+          onChange={setRelationshipStatus}
+          ariaLabel="Partnership Status"
+          disabled={saving}
+          hint={
+            mode === "add"
+              ? "After you add this vendor, we’ll switch to this tab and highlight the new row."
+              : undefined
+          }
+        />
         <div>
           <label
             htmlFor="vendor-desc"
@@ -375,9 +445,7 @@ export function VendorFormModal({
                     type="button"
                     onClick={() => toggleRemoveImage(img.id)}
                     className={`relative h-16 w-24 overflow-hidden rounded-xl border-2 text-left ${
-                      marked
-                        ? "border-red-500 opacity-50"
-                        : "border-zinc-200"
+                      marked ? "border-red-500 opacity-50" : "border-zinc-200"
                     }`}
                   >
                     <SignedVendorImage
@@ -414,9 +482,19 @@ export function VendorFormModal({
           <button
             type="submit"
             disabled={saving}
-            className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-700 disabled:opacity-50"
+            className="inline-flex min-w-[10.5rem] items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-700 disabled:pointer-events-none disabled:opacity-60"
           >
-            {saving ? "Saving…" : saveButtonLabel}
+            {saving ? (
+              <>
+                <span
+                  className="inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-white/35 border-t-white"
+                  aria-hidden
+                />
+                {mode === "add" ? "Adding vendor…" : "Saving changes…"}
+              </>
+            ) : (
+              saveButtonLabel
+            )}
           </button>
         </div>
       </form>

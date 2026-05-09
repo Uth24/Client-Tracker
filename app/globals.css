@@ -38,3 +38,22 @@ body {
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.25s ease-in-out infinite;
 }
+
+@keyframes vendor-added-highlight {
+  0% {
+    box-shadow: inset 0 0 0 2px rgb(14 165 233 / 0.85);
+    background-color: rgb(240 249 255 / 0.95);
+  }
+  40% {
+    box-shadow: inset 0 0 0 2px rgb(14 165 233 / 0.35);
+    background-color: rgb(240 249 255 / 0.65);
+  }
+  100% {
+    box-shadow: inset 0 0 0 0 transparent;
+    background-color: transparent;
+  }
+}
+
+.vendor-added-highlight {
+  animation: vendor-added-highlight 2.4s ease-out forwards;
+}
