@@ -7,9 +7,10 @@ type ModalProps = {
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
-  size?: "md" | "lg" | "xl" | "2xl";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl";
 };
 const sizeClass = {
+  sm: "max-w-md",
   md: "max-w-lg",
   lg: "max-w-2xl",
   xl: "max-w-4xl",
@@ -35,7 +36,7 @@ export function Modal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <button
         type="button"
         className="absolute inset-0 bg-zinc-950/40 backdrop-blur-sm"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   type Vendor,
@@ -16,6 +17,7 @@ import { VENDOR_ROW_SELECT } from "@/lib/vendors/vendor-query-select";
 import { SignedVendorImage } from "@/components/vendors/SignedVendorImage";
 import { VendorPartnershipSegmented } from "@/components/vendors/VendorPartnershipSegmented";
 import { Modal } from "@/components/ui/Modal";
+import { useDeleteConfirmDialog } from "@/components/ui/use-delete-confirm";
 
 export type VendorFormSavePayload =
   | { mode: "add"; vendor: Vendor }
@@ -117,10 +119,19 @@ export function VendorFormModal({
   onClose,
   onSaved,
 }: Props) {
+  const { confirmDelete, deleteConfirmDialog } = useDeleteConfirmDialog();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState("");
   const [website, setWebsite] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [zipCode, setZipCode] = useState("");
+  const [contactNotes, setContactNotes] = useState("");
   const [relationshipStatus, setRelationshipStatus] =
     useState<VendorRelationshipStatus>("havent_worked_with");
   const [serviceCatalog, setServiceCatalog] = useState<VendorServiceOption[]>(
@@ -133,7 +144,11 @@ export function VendorFormModal({
   const [serviceAddInputOpen, setServiceAddInputOpen] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [addingService, setAddingService] = useState(false);
+  const [deletingServiceOptionId, setDeletingServiceOptionId] = useState<
+    string | null
+  >(null);
   const newServiceInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState<VendorImage[]>([]);
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
@@ -173,6 +188,14 @@ export function VendorFormModal({
       setDescription(vendor.description ?? "");
       setType(vendor.type ?? "");
       setWebsite(vendor.website?.trim() ?? "");
+      setEmail(vendor.email?.trim() ?? "");
+      setPhone(vendor.phone?.trim() ?? "");
+      setAddressLine1(vendor.address_line1?.trim() ?? "");
+      setAddressLine2(vendor.address_line2?.trim() ?? "");
+      setCity(vendor.city?.trim() ?? "");
+      setState(vendor.state?.trim() ?? "");
+      setZipCode(vendor.zip_code?.trim() ?? "");
+      setContactNotes(vendor.notes?.trim() ?? "");
       setRelationshipStatus(vendor.relationship_status ?? "havent_worked_with");
       relationshipAtOpenRef.current =
         vendor.relationship_status ?? "havent_worked_with";
@@ -189,6 +212,14 @@ export function VendorFormModal({
       setDescription("");
       setType("");
       setWebsite("");
+      setEmail("");
+      setPhone("");
+      setAddressLine1("");
+      setAddressLine2("");
+      setCity("");
+      setState("");
+      setZipCode("");
+      setContactNotes("");
       setRelationshipStatus("havent_worked_with");
       setExistingImages([]);
       setSelectedServiceIds(new Set());
@@ -239,6 +270,41 @@ export function VendorFormModal({
       else next.add(optionId);
       return next;
     });
+  }
+
+  async function handleDeleteServiceOption(opt: VendorServiceOption) {
+    if (deletingServiceOptionId || saving) return;
+    const ok = await confirmDelete({
+      title: "Remove this service from your catalog?",
+      body: `“${opt.label}” will be unlinked from every vendor, including this one.`,
+    });
+    if (!ok) return;
+    setDeletingServiceOptionId(opt.id);
+    setError(null);
+    try {
+      const supabase = createClient();
+      const { error: linkErr } = await supabase
+        .from("vendor_services")
+        .delete()
+        .eq("service_option_id", opt.id);
+      if (linkErr) throw linkErr;
+      const { error } = await supabase
+        .from("vendor_service_options")
+        .delete()
+        .eq("id", opt.id);
+      if (error) throw error;
+      setServiceCatalog((prev) => prev.filter((o) => o.id !== opt.id));
+      setSelectedServiceIds((prev) => {
+        const next = new Set(prev);
+        next.delete(opt.id);
+        return next;
+      });
+      router.refresh();
+    } catch (err: unknown) {
+      setError(formatClientError(err));
+    } finally {
+      setDeletingServiceOptionId(null);
+    }
   }
 
   async function handleAddServiceOption() {
@@ -351,6 +417,14 @@ export function VendorFormModal({
             description: description.trim() || null,
             type: type.trim() || null,
             website: website.trim() || null,
+            email: email.trim() || null,
+            phone: phone.trim() || null,
+            address_line1: addressLine1.trim() || null,
+            address_line2: addressLine2.trim() || null,
+            city: city.trim() || null,
+            state: state.trim() || null,
+            zip_code: zipCode.trim() || null,
+            notes: contactNotes.trim() || null,
             relationship_status: relationshipStatus,
           })
           .select("id")
@@ -404,6 +478,14 @@ export function VendorFormModal({
             description: description.trim() || null,
             type: type.trim() || null,
             website: website.trim() || null,
+            email: email.trim() || null,
+            phone: phone.trim() || null,
+            address_line1: addressLine1.trim() || null,
+            address_line2: addressLine2.trim() || null,
+            city: city.trim() || null,
+            state: state.trim() || null,
+            zip_code: zipCode.trim() || null,
+            notes: contactNotes.trim() || null,
             relationship_status: relationshipStatus,
           })
           .eq("id", vendor.id);
@@ -471,6 +553,8 @@ export function VendorFormModal({
   const title = mode === "add" ? "Add vendor" : "Edit vendor";
 
   return (
+    <>
+    {deleteConfirmDialog}
     <Modal open={open} onClose={onClose} title={title} size="2xl">
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
@@ -531,6 +615,141 @@ export function VendorFormModal({
           />
         </div>
 
+        <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50/50 p-4 shadow-sm ring-1 ring-zinc-100/80">
+          <h3 className="text-sm font-semibold text-zinc-900">Contact</h3>
+          <p className="mt-0.5 text-xs text-zinc-500">
+            Phone, email, and address—same idea as clients, for scheduling and
+            outreach.
+          </p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="vendor-email"
+                className="block text-sm font-medium text-zinc-700"
+              >
+                Email (optional)
+              </label>
+              <input
+                id="vendor-email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="vendor-phone"
+                className="block text-sm font-medium text-zinc-700"
+              >
+                Phone (optional)
+              </label>
+              <input
+                id="vendor-phone"
+                type="tel"
+                autoComplete="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
+              />
+            </div>
+          </div>
+          <div className="mt-4">
+            <label
+              htmlFor="vendor-address1"
+              className="block text-sm font-medium text-zinc-700"
+            >
+              Address line 1 (optional)
+            </label>
+            <input
+              id="vendor-address1"
+              autoComplete="address-line1"
+              value={addressLine1}
+              onChange={(e) => setAddressLine1(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
+            />
+          </div>
+          <div className="mt-4">
+            <label
+              htmlFor="vendor-address2"
+              className="block text-sm font-medium text-zinc-700"
+            >
+              Address line 2 (optional)
+            </label>
+            <input
+              id="vendor-address2"
+              autoComplete="address-line2"
+              value={addressLine2}
+              onChange={(e) => setAddressLine2(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
+            />
+          </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <div>
+              <label
+                htmlFor="vendor-city"
+                className="block text-sm font-medium text-zinc-700"
+              >
+                City (optional)
+              </label>
+              <input
+                id="vendor-city"
+                autoComplete="address-level2"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="vendor-state"
+                className="block text-sm font-medium text-zinc-700"
+              >
+                State (optional)
+              </label>
+              <input
+                id="vendor-state"
+                autoComplete="address-level1"
+                value={state}
+                onChange={(e) => setState(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="vendor-zip"
+                className="block text-sm font-medium text-zinc-700"
+              >
+                ZIP (optional)
+              </label>
+              <input
+                id="vendor-zip"
+                autoComplete="postal-code"
+                value={zipCode}
+                onChange={(e) => setZipCode(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
+              />
+            </div>
+          </div>
+          <div className="mt-4">
+            <label
+              htmlFor="vendor-contact-notes"
+              className="block text-sm font-medium text-zinc-700"
+            >
+              Contact notes (optional)
+            </label>
+            <textarea
+              id="vendor-contact-notes"
+              rows={3}
+              value={contactNotes}
+              onChange={(e) => setContactNotes(e.target.value)}
+              placeholder="Best time to call, billing contact, gate codes…"
+              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
+            />
+          </div>
+        </div>
+
         <div className="rounded-2xl border border-sky-100 bg-sky-50/35 p-4 shadow-sm ring-1 ring-sky-100/60">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h3 className="text-sm font-semibold text-zinc-900">
@@ -540,6 +759,10 @@ export function VendorFormModal({
               <span className="text-xs text-zinc-500">Loading…</span>
             ) : null}
           </div>
+          <p className="mt-1 text-xs text-zinc-500">
+            Use <span className="font-medium text-zinc-700">×</span> on a chip to
+            delete a misspelled service from your catalog (removed everywhere).
+          </p>
           <div
             className="mt-3 flex max-h-[11.5rem] flex-wrap content-start gap-2 overflow-y-auto"
             role="group"
@@ -554,21 +777,46 @@ export function VendorFormModal({
             ) : (
               serviceCatalog.map((opt) => {
                 const on = selectedServiceIds.has(opt.id);
+                const busy = Boolean(deletingServiceOptionId);
+                const removing = deletingServiceOptionId === opt.id;
                 return (
-                  <button
+                  <span
                     key={opt.id}
-                    type="button"
-                    aria-pressed={on}
-                    disabled={saving}
-                    onClick={() => toggleServiceSelection(opt.id)}
-                    className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                    className={`inline-flex max-w-full items-stretch overflow-hidden rounded-full text-sm font-medium ring-1 ${
                       on
-                        ? "bg-sky-600 text-white shadow-sm ring-1 ring-sky-700/30 hover:bg-sky-700"
-                        : "bg-white text-zinc-700 ring-1 ring-zinc-200/90 hover:bg-zinc-50 hover:ring-zinc-300"
-                    } disabled:pointer-events-none disabled:opacity-50`}
+                        ? "bg-sky-600 text-white shadow-sm ring-sky-700/30"
+                        : "bg-white text-zinc-700 ring-zinc-200/90"
+                    } ${busy ? "pointer-events-none opacity-60" : ""}`}
                   >
-                    {opt.label}
-                  </button>
+                    <button
+                      type="button"
+                      aria-pressed={on}
+                      disabled={saving || busy}
+                      onClick={() => toggleServiceSelection(opt.id)}
+                      className={`max-w-[10rem] truncate px-3 py-1.5 text-left font-medium ${
+                        on ? "hover:bg-sky-700" : "hover:bg-zinc-50"
+                      } disabled:pointer-events-none disabled:opacity-50`}
+                    >
+                      {opt.label}
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Delete ${opt.label} from catalog`}
+                      title="Remove from catalog"
+                      disabled={saving || busy}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        void handleDeleteServiceOption(opt);
+                      }}
+                      className={`shrink-0 border-l px-2 py-1.5 text-base font-light leading-none disabled:opacity-50 ${
+                        on
+                          ? "border-sky-700/40 text-white hover:bg-sky-700/70"
+                          : "border-zinc-200/90 text-zinc-500 hover:bg-red-50 hover:text-red-700"
+                      }`}
+                    >
+                      {removing ? "…" : "×"}
+                    </button>
+                  </span>
                 );
               })
             )}
@@ -769,5 +1017,6 @@ export function VendorFormModal({
         </div>
       </form>
     </Modal>
+    </>
   );
 }

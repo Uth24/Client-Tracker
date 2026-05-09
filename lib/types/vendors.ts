@@ -66,6 +66,15 @@ export type Vendor = {
   type: string | null;
   /** Company site; optional. Present after `20260509210000_vendor_website` migration. */
   website?: string | null;
+  /** Contact fields; optional. Present after `20260509130000_vendor_contact` migration. */
+  email?: string | null;
+  phone?: string | null;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip_code?: string | null;
+  notes?: string | null;
   /** Present after migration; treat missing/null as havent_worked_with in UI. */
   relationship_status?: VendorRelationshipStatus | null;
   created_at: string;

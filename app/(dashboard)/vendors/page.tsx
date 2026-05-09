@@ -86,7 +86,8 @@ export default async function VendorsPage({
       <p className="mt-1 text-zinc-600">
         Use <span className="font-medium text-zinc-800">All</span> or a
         partnership tab to narrow the list, pick services, search by name,
-        type, or website, filter by site presence, and click a row for details.
+        type, website, email, phone, address, or notes, filter by site presence,
+        and click a row for details.
       </p>
       <div className="mt-8">
         <VendorList

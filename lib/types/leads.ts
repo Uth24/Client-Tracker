@@ -28,6 +28,15 @@ export type Lead = {
   /** Type of work / category (e.g. contractor, designer). */
   type: string | null;
   website?: string | null;
+  /** Contact fields; optional. Present after `20260509140000_lead_contact` migration. */
+  email?: string | null;
+  phone?: string | null;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip_code?: string | null;
+  notes?: string | null;
   created_at: string;
   lead_images?: LeadImage[] | null;
   lead_services?: LeadServiceLink[] | null;

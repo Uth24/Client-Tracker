@@ -23,6 +23,7 @@ import {
   type VendorFormSavePayload,
 } from "@/components/vendors/VendorFormModal";
 import { VendorPartnershipSegmented } from "@/components/vendors/VendorPartnershipSegmented";
+import { useDeleteConfirmDialog } from "@/components/ui/use-delete-confirm";
 
 function relationshipBadgeClass(rel: VendorRelationshipStatus | null) {
   switch (rel ?? "havent_worked_with") {
@@ -99,6 +100,7 @@ export function VendorList({
   serviceFilterIds,
   websiteFilter,
 }: Props) {
+  const { confirmDelete, deleteConfirmDialog } = useDeleteConfirmDialog();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -147,6 +149,9 @@ export function VendorList({
   const [serviceAddOpen, setServiceAddOpen] = useState(false);
   const [newCatalogServiceLabel, setNewCatalogServiceLabel] = useState("");
   const [addingCatalogService, setAddingCatalogService] = useState(false);
+  const [deletingCatalogServiceId, setDeletingCatalogServiceId] = useState<
+    string | null
+  >(null);
   const [serviceCatalogError, setServiceCatalogError] = useState<string | null>(
     null,
   );
@@ -308,13 +313,17 @@ export function VendorList({
   async function handleBulkDelete() {
     const ids = [...selectedIds];
     if (ids.length === 0) return;
-    if (
-      !confirm(
-        `Delete ${ids.length} vendor${ids.length === 1 ? "" : "s"}? This cannot be undone (images rows cascade).`,
-      )
-    ) {
-      return;
-    }
+    const ok = await confirmDelete({
+      title:
+        ids.length === 1
+          ? "Delete this vendor?"
+          : `Delete ${ids.length} vendors?`,
+      body:
+        ids.length === 1
+          ? "You are about to delete the selected vendor. This cannot be undone (including related images)."
+          : `You are about to delete ${ids.length} vendors. This cannot be undone (including related images).`,
+    });
+    if (!ok) return;
     const supabase = createClient();
     const { error } = await supabase.from("vendors").delete().in("id", ids);
     if (error) {
@@ -330,13 +339,11 @@ export function VendorList({
   }
 
   async function handleDelete(v: Vendor) {
-    if (
-      !confirm(
-        `Delete vendor "${v.name}"? This cannot be undone (images rows cascade).`,
-      )
-    ) {
-      return;
-    }
+    const ok = await confirmDelete({
+      title: "Delete this vendor?",
+      body: `You are about to delete “${v.name}”. This cannot be undone (including related images).`,
+    });
+    if (!ok) return;
     const supabase = createClient();
     const { error } = await supabase.from("vendors").delete().eq("id", v.id);
     if (error) {
@@ -625,6 +632,43 @@ export function VendorList({
     }
   }
 
+  async function handleDeleteCatalogService(opt: VendorServiceOption) {
+    if (deletingCatalogServiceId) return;
+    const ok = await confirmDelete({
+      title: "Remove this service from your catalog?",
+      body: `“${opt.label}” will be removed from the filter list and unlinked from every vendor. You can add a new tag with the same name later.`,
+    });
+    if (!ok) return;
+    setDeletingCatalogServiceId(opt.id);
+    setServiceCatalogError(null);
+    try {
+      const supabase = createClient();
+      const { error: linkErr } = await supabase
+        .from("vendor_services")
+        .delete()
+        .eq("service_option_id", opt.id);
+      if (linkErr) throw linkErr;
+      const { error } = await supabase
+        .from("vendor_service_options")
+        .delete()
+        .eq("id", opt.id);
+      if (error) throw error;
+
+      setServiceOptions((prev) => prev.filter((o) => o.id !== opt.id));
+      const wasFiltered = serviceFilterIntentRef.current.includes(opt.id);
+      const next = serviceFilterIntentRef.current.filter((id) => id !== opt.id);
+      if (wasFiltered) {
+        await queueServiceFilterApply(next);
+      } else {
+        router.refresh();
+      }
+    } catch (err: unknown) {
+      setServiceCatalogError(formatClientError(err));
+    } finally {
+      setDeletingCatalogServiceId(null);
+    }
+  }
+
   function handleVendorSaved(payload: VendorFormSavePayload) {
     if (payload.mode === "edit") {
       if (payload.partnershipStatusChanged) {
@@ -649,6 +693,7 @@ export function VendorList({
 
   return (
     <div className="space-y-6">
+      {deleteConfirmDialog}
       {toast ? (
         <div
           className="fixed left-1/2 top-6 z-[60] w-[min(calc(100vw-1.5rem),28rem)] -translate-x-1/2 rounded-2xl border border-emerald-300/70 bg-emerald-50 px-6 py-4 text-center text-base font-semibold leading-snug text-emerald-950 shadow-xl shadow-emerald-900/15 ring-1 ring-emerald-200/90 sm:top-10 sm:px-10 sm:py-5 sm:text-lg"
@@ -683,7 +728,9 @@ export function VendorList({
               <kbd className="rounded bg-zinc-200/90 px-1 py-0.5 font-mono text-[10px] font-semibold text-zinc-800">
                 Enter
               </kbd>{" "}
-              to add it.
+              to add it. Use{" "}
+              <span className="font-medium text-zinc-700">×</span> on a tag to
+              delete a misspelling from your catalog.
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
@@ -770,20 +817,46 @@ export function VendorList({
           ) : (
             serviceOptions.map((opt) => {
               const on = activeServiceFilter.includes(opt.id);
+              const busy = Boolean(deletingCatalogServiceId);
+              const removing = deletingCatalogServiceId === opt.id;
               return (
-                <button
+                <span
                   key={opt.id}
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() => handleServiceFilterToggle(opt.id)}
-                  className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                  className={`inline-flex max-w-full items-stretch overflow-hidden rounded-full text-sm font-medium ring-1 transition-opacity ${
                     on
-                      ? "bg-sky-600 text-white shadow-sm ring-1 ring-sky-700/25 hover:bg-sky-700"
-                      : "bg-white text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-100"
-                  }`}
+                      ? "bg-sky-600 text-white shadow-sm ring-sky-700/25"
+                      : "bg-white text-zinc-700 ring-zinc-200"
+                  } ${busy ? "pointer-events-none opacity-60" : ""}`}
                 >
-                  {opt.label}
-                </button>
+                  <button
+                    type="button"
+                    aria-pressed={on}
+                    disabled={listLoading || busy}
+                    onClick={() => handleServiceFilterToggle(opt.id)}
+                    className={`max-w-[11rem] truncate px-3 py-1.5 text-left font-medium ${
+                      on ? "hover:bg-sky-700" : "hover:bg-zinc-100"
+                    } disabled:opacity-50`}
+                  >
+                    {opt.label}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Delete service ${opt.label} from catalog`}
+                    title="Remove from catalog"
+                    disabled={listLoading || busy}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      void handleDeleteCatalogService(opt);
+                    }}
+                    className={`shrink-0 border-l px-2 py-1.5 text-base font-light leading-none disabled:opacity-50 ${
+                      on
+                        ? "border-sky-700/40 text-white hover:bg-sky-700/70"
+                        : "border-zinc-200 text-zinc-500 hover:bg-red-50 hover:text-red-700"
+                    }`}
+                  >
+                    {removing ? "…" : "×"}
+                  </button>
+                </span>
               );
             })
           )}
@@ -798,7 +871,7 @@ export function VendorList({
           <input
             id="vendor-search"
             type="search"
-            placeholder="Search by name, type, description, or website…"
+            placeholder="Search name, type, description, website, email, phone, address, notes…"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);

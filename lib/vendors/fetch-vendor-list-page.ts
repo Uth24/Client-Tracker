@@ -94,7 +94,20 @@ export async function fetchVendorListPage(
   if (qNorm) {
     const pat = likePattern(qNorm);
     listQuery = listQuery.or(
-      `name.ilike.${pat},type.ilike.${pat},description.ilike.${pat},website.ilike.${pat}`,
+      [
+        `name.ilike.${pat}`,
+        `type.ilike.${pat}`,
+        `description.ilike.${pat}`,
+        `website.ilike.${pat}`,
+        `email.ilike.${pat}`,
+        `phone.ilike.${pat}`,
+        `address_line1.ilike.${pat}`,
+        `address_line2.ilike.${pat}`,
+        `city.ilike.${pat}`,
+        `state.ilike.${pat}`,
+        `zip_code.ilike.${pat}`,
+        `notes.ilike.${pat}`,
+      ].join(","),
     );
   }
 

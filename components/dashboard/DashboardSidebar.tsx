@@ -11,7 +11,7 @@ const nav = [
   { href: "/clients", label: "Clients", placeholder: false, icon: PeopleIcon },
   { href: "/projects", label: "Projects", placeholder: false, icon: FolderIcon },
   { href: "/calendar", label: "Calendar", placeholder: false, icon: CalendarIcon },
-  { href: "/settings", label: "Settings", placeholder: true, icon: SettingsIcon },
+  { href: "/settings", label: "Settings", placeholder: false, icon: SettingsIcon },
 ] as const;
 
 export function DashboardSidebar({ userEmail }: { userEmail: string }) {

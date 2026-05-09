@@ -28,6 +28,19 @@ function formatDate(iso: string) {
   }
 }
 
+function formatAddressLines(v: Vendor): string[] {
+  const lines: string[] = [];
+  if (v.address_line1?.trim()) lines.push(v.address_line1.trim());
+  if (v.address_line2?.trim()) lines.push(v.address_line2.trim());
+  const cityParts = [v.city?.trim(), v.state?.trim()].filter(Boolean);
+  const cityState = cityParts.join(", ");
+  const zip = v.zip_code?.trim();
+  if (cityState && zip) lines.push(`${cityState} ${zip}`);
+  else if (cityState) lines.push(cityState);
+  else if (zip) lines.push(zip);
+  return lines;
+}
+
 export function VendorDetailModal({ vendor, open, onClose }: Props) {
   if (!vendor) return null;
 
@@ -75,6 +88,63 @@ export function VendorDetailModal({ vendor, open, onClose }: Props) {
           ) : (
             <p className="mt-0.5 text-zinc-600">—</p>
           )}
+        </div>
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            Contact
+          </p>
+          <dl className="mt-2 space-y-2 text-sm">
+            <div>
+              <dt className="text-xs font-medium text-zinc-500">Email</dt>
+              <dd className="mt-0.5 text-zinc-900">
+                {vendor.email?.trim() ? (
+                  <a
+                    href={`mailto:${vendor.email.trim()}`}
+                    className="font-medium text-sky-700 underline decoration-sky-300 underline-offset-2 hover:text-sky-900"
+                  >
+                    {vendor.email.trim()}
+                  </a>
+                ) : (
+                  "—"
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium text-zinc-500">Phone</dt>
+              <dd className="mt-0.5 text-zinc-900">
+                {vendor.phone?.trim() ? (
+                  <a
+                    href={`tel:${vendor.phone.trim().replace(/\s+/g, "")}`}
+                    className="font-medium text-sky-700 underline decoration-sky-300 underline-offset-2 hover:text-sky-900"
+                  >
+                    {vendor.phone.trim()}
+                  </a>
+                ) : (
+                  "—"
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium text-zinc-500">Address</dt>
+              <dd className="mt-0.5 text-zinc-900">
+                {(() => {
+                  const lines = formatAddressLines(vendor);
+                  if (lines.length === 0) return "—";
+                  return (
+                    <span className="block whitespace-pre-line">
+                      {lines.join("\n")}
+                    </span>
+                  );
+                })()}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium text-zinc-500">Contact notes</dt>
+              <dd className="mt-0.5 whitespace-pre-wrap text-zinc-800">
+                {vendor.notes?.trim() ? vendor.notes : "—"}
+              </dd>
+            </div>
+          </dl>
         </div>
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">

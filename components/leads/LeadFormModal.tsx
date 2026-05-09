@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   type Lead,
@@ -14,6 +15,7 @@ import { uploadLeadImageFiles } from "@/lib/leads/storage";
 import { LEAD_ROW_SELECT } from "@/lib/leads/lead-query-select";
 import { SignedLeadImage } from "@/components/leads/SignedLeadImage";
 import { Modal } from "@/components/ui/Modal";
+import { useDeleteConfirmDialog } from "@/components/ui/use-delete-confirm";
 
 export type LeadFormSavePayload =
   | { mode: "add"; lead: Lead }
@@ -115,6 +117,14 @@ export function LeadFormModal({
   const [description, setDescription] = useState("");
   const [type, setType] = useState("");
   const [website, setWebsite] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [zipCode, setZipCode] = useState("");
+  const [contactNotes, setContactNotes] = useState("");
   const [serviceCatalog, setServiceCatalog] = useState<LeadServiceOption[]>(
     [],
   );
@@ -125,7 +135,12 @@ export function LeadFormModal({
   const [serviceAddInputOpen, setServiceAddInputOpen] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [addingService, setAddingService] = useState(false);
+  const [deletingServiceOptionId, setDeletingServiceOptionId] = useState<
+    string | null
+  >(null);
   const newServiceInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+  const { confirmDelete, deleteConfirmDialog } = useDeleteConfirmDialog();
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState<LeadImage[]>([]);
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
@@ -160,6 +175,14 @@ export function LeadFormModal({
       setDescription(lead.description ?? "");
       setType(lead.type ?? "");
       setWebsite(lead.website?.trim() ?? "");
+      setEmail(lead.email?.trim() ?? "");
+      setPhone(lead.phone?.trim() ?? "");
+      setAddressLine1(lead.address_line1?.trim() ?? "");
+      setAddressLine2(lead.address_line2?.trim() ?? "");
+      setCity(lead.city?.trim() ?? "");
+      setState(lead.state?.trim() ?? "");
+      setZipCode(lead.zip_code?.trim() ?? "");
+      setContactNotes(lead.notes?.trim() ?? "");
       setExistingImages([...(lead.lead_images ?? [])]);
       setSelectedServiceIds(
         new Set(
@@ -173,6 +196,14 @@ export function LeadFormModal({
       setDescription("");
       setType("");
       setWebsite("");
+      setEmail("");
+      setPhone("");
+      setAddressLine1("");
+      setAddressLine2("");
+      setCity("");
+      setState("");
+      setZipCode("");
+      setContactNotes("");
       setExistingImages([]);
       setSelectedServiceIds(new Set());
     }
@@ -219,6 +250,41 @@ export function LeadFormModal({
       else next.add(optionId);
       return next;
     });
+  }
+
+  async function handleDeleteServiceOption(opt: LeadServiceOption) {
+    if (deletingServiceOptionId || saving) return;
+    const ok = await confirmDelete({
+      title: "Remove this service from your catalog?",
+      body: `“${opt.label}” will be unlinked from every lead, including this one.`,
+    });
+    if (!ok) return;
+    setDeletingServiceOptionId(opt.id);
+    setError(null);
+    try {
+      const supabase = createClient();
+      const { error: linkErr } = await supabase
+        .from("lead_services")
+        .delete()
+        .eq("service_option_id", opt.id);
+      if (linkErr) throw linkErr;
+      const { error } = await supabase
+        .from("lead_service_options")
+        .delete()
+        .eq("id", opt.id);
+      if (error) throw error;
+      setServiceCatalog((prev) => prev.filter((o) => o.id !== opt.id));
+      setSelectedServiceIds((prev) => {
+        const next = new Set(prev);
+        next.delete(opt.id);
+        return next;
+      });
+      router.refresh();
+    } catch (err: unknown) {
+      setError(formatClientError(err));
+    } finally {
+      setDeletingServiceOptionId(null);
+    }
   }
 
   async function handleAddServiceOption() {
@@ -331,6 +397,14 @@ export function LeadFormModal({
             description: description.trim() || null,
             type: type.trim() || null,
             website: website.trim() || null,
+            email: email.trim() || null,
+            phone: phone.trim() || null,
+            address_line1: addressLine1.trim() || null,
+            address_line2: addressLine2.trim() || null,
+            city: city.trim() || null,
+            state: state.trim() || null,
+            zip_code: zipCode.trim() || null,
+            notes: contactNotes.trim() || null,
           })
           .select("id")
           .single();
@@ -383,6 +457,14 @@ export function LeadFormModal({
             description: description.trim() || null,
             type: type.trim() || null,
             website: website.trim() || null,
+            email: email.trim() || null,
+            phone: phone.trim() || null,
+            address_line1: addressLine1.trim() || null,
+            address_line2: addressLine2.trim() || null,
+            city: city.trim() || null,
+            state: state.trim() || null,
+            zip_code: zipCode.trim() || null,
+            notes: contactNotes.trim() || null,
           })
           .eq("id", lead.id);
 
@@ -445,6 +527,8 @@ export function LeadFormModal({
   const title = mode === "add" ? "Add lead" : "Edit lead";
 
   return (
+    <>
+    {deleteConfirmDialog}
     <Modal open={open} onClose={onClose} title={title} size="2xl">
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
@@ -505,6 +589,141 @@ export function LeadFormModal({
           />
         </div>
 
+        <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50/50 p-4 shadow-sm ring-1 ring-zinc-100/80">
+          <h3 className="text-sm font-semibold text-zinc-900">Contact</h3>
+          <p className="mt-0.5 text-xs text-zinc-500">
+            Phone, email, and address—same idea as clients and vendors, for
+            follow-up and scheduling.
+          </p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="lead-email"
+                className="block text-sm font-medium text-zinc-700"
+              >
+                Email (optional)
+              </label>
+              <input
+                id="lead-email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="lead-phone"
+                className="block text-sm font-medium text-zinc-700"
+              >
+                Phone (optional)
+              </label>
+              <input
+                id="lead-phone"
+                type="tel"
+                autoComplete="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
+              />
+            </div>
+          </div>
+          <div className="mt-4">
+            <label
+              htmlFor="lead-address1"
+              className="block text-sm font-medium text-zinc-700"
+            >
+              Address line 1 (optional)
+            </label>
+            <input
+              id="lead-address1"
+              autoComplete="address-line1"
+              value={addressLine1}
+              onChange={(e) => setAddressLine1(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
+            />
+          </div>
+          <div className="mt-4">
+            <label
+              htmlFor="lead-address2"
+              className="block text-sm font-medium text-zinc-700"
+            >
+              Address line 2 (optional)
+            </label>
+            <input
+              id="lead-address2"
+              autoComplete="address-line2"
+              value={addressLine2}
+              onChange={(e) => setAddressLine2(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
+            />
+          </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <div>
+              <label
+                htmlFor="lead-city"
+                className="block text-sm font-medium text-zinc-700"
+              >
+                City (optional)
+              </label>
+              <input
+                id="lead-city"
+                autoComplete="address-level2"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="lead-state"
+                className="block text-sm font-medium text-zinc-700"
+              >
+                State (optional)
+              </label>
+              <input
+                id="lead-state"
+                autoComplete="address-level1"
+                value={state}
+                onChange={(e) => setState(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="lead-zip"
+                className="block text-sm font-medium text-zinc-700"
+              >
+                ZIP (optional)
+              </label>
+              <input
+                id="lead-zip"
+                autoComplete="postal-code"
+                value={zipCode}
+                onChange={(e) => setZipCode(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
+              />
+            </div>
+          </div>
+          <div className="mt-4">
+            <label
+              htmlFor="lead-contact-notes"
+              className="block text-sm font-medium text-zinc-700"
+            >
+              Contact notes (optional)
+            </label>
+            <textarea
+              id="lead-contact-notes"
+              rows={3}
+              value={contactNotes}
+              onChange={(e) => setContactNotes(e.target.value)}
+              placeholder="Best time to call, referral source, gate codes…"
+              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none ring-1 ring-zinc-100 focus:ring-2 focus:ring-sky-200"
+            />
+          </div>
+        </div>
+
         <div className="rounded-2xl border border-sky-100 bg-sky-50/35 p-4 shadow-sm ring-1 ring-sky-100/60">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h3 className="text-sm font-semibold text-zinc-900">
@@ -514,6 +733,10 @@ export function LeadFormModal({
               <span className="text-xs text-zinc-500">Loading…</span>
             ) : null}
           </div>
+          <p className="mt-1 text-xs text-zinc-500">
+            Use <span className="font-medium text-zinc-700">×</span> on a chip to
+            delete a misspelled service from your catalog (removed everywhere).
+          </p>
           <div
             className="mt-3 flex max-h-[11.5rem] flex-wrap content-start gap-2 overflow-y-auto"
             role="group"
@@ -528,21 +751,46 @@ export function LeadFormModal({
             ) : (
               serviceCatalog.map((opt) => {
                 const on = selectedServiceIds.has(opt.id);
+                const busy = Boolean(deletingServiceOptionId);
+                const removing = deletingServiceOptionId === opt.id;
                 return (
-                  <button
+                  <span
                     key={opt.id}
-                    type="button"
-                    aria-pressed={on}
-                    disabled={saving}
-                    onClick={() => toggleServiceSelection(opt.id)}
-                    className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                    className={`inline-flex max-w-full items-stretch overflow-hidden rounded-full text-sm font-medium ring-1 ${
                       on
-                        ? "bg-sky-600 text-white shadow-sm ring-1 ring-sky-700/30 hover:bg-sky-700"
-                        : "bg-white text-zinc-700 ring-1 ring-zinc-200/90 hover:bg-zinc-50 hover:ring-zinc-300"
-                    } disabled:pointer-events-none disabled:opacity-50`}
+                        ? "bg-sky-600 text-white shadow-sm ring-sky-700/30"
+                        : "bg-white text-zinc-700 ring-zinc-200/90"
+                    } ${busy ? "pointer-events-none opacity-60" : ""}`}
                   >
-                    {opt.label}
-                  </button>
+                    <button
+                      type="button"
+                      aria-pressed={on}
+                      disabled={saving || busy}
+                      onClick={() => toggleServiceSelection(opt.id)}
+                      className={`max-w-[10rem] truncate px-3 py-1.5 text-left font-medium ${
+                        on ? "hover:bg-sky-700" : "hover:bg-zinc-50"
+                      } disabled:pointer-events-none disabled:opacity-50`}
+                    >
+                      {opt.label}
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Delete ${opt.label} from catalog`}
+                      title="Remove from catalog"
+                      disabled={saving || busy}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        void handleDeleteServiceOption(opt);
+                      }}
+                      className={`shrink-0 border-l px-2 py-1.5 text-base font-light leading-none disabled:opacity-50 ${
+                        on
+                          ? "border-sky-700/40 text-white hover:bg-sky-700/70"
+                          : "border-zinc-200/90 text-zinc-500 hover:bg-red-50 hover:text-red-700"
+                      }`}
+                    >
+                      {removing ? "…" : "×"}
+                    </button>
+                  </span>
                 );
               })
             )}
@@ -730,5 +978,6 @@ export function LeadFormModal({
         </div>
       </form>
     </Modal>
+    </>
   );
 }

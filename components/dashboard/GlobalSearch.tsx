@@ -81,8 +81,10 @@ export function GlobalSearch() {
             .limit(5),
           supabase
             .from("vendors")
-            .select("id, name, type")
-            .or(`name.ilike.${pattern},type.ilike.${pattern},description.ilike.${pattern}`)
+            .select("id, name, type, email, phone")
+            .or(
+              `name.ilike.${pattern},type.ilike.${pattern},description.ilike.${pattern},email.ilike.${pattern},phone.ilike.${pattern},notes.ilike.${pattern}`,
+            )
             .limit(5),
           supabase
             .from("jobs")
@@ -109,12 +111,15 @@ export function GlobalSearch() {
           });
         }
 
-        for (const v of (vendorsRes.data ?? []) as Pick<Vendor, "id" | "name" | "type">[]) {
+        for (const v of (vendorsRes.data ?? []) as Pick<
+          Vendor,
+          "id" | "name" | "type" | "email" | "phone"
+        >[]) {
           next.push({
             kind: "vendor",
             id: v.id,
             title: v.name,
-            subtitle: v.type ?? undefined,
+            subtitle: v.type ?? v.email ?? v.phone ?? undefined,
             href: "/vendors",
           });
         }

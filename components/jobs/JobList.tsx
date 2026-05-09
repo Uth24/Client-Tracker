@@ -17,6 +17,7 @@ import type { Client } from "@/lib/types/clients";
 import type { Vendor } from "@/lib/types/vendors";
 import type { Job, JobStatus } from "@/lib/types/jobs";
 import { JobFormModal } from "@/components/jobs/JobFormModal";
+import { useDeleteConfirmDialog } from "@/components/ui/use-delete-confirm";
 
 type Props = {
   initialJobs: Job[];
@@ -286,6 +287,7 @@ function JobCard({
 }
 
 export function JobList({ initialJobs, clients, vendors }: Props) {
+  const { confirmDelete, deleteConfirmDialog } = useDeleteConfirmDialog();
   const router = useRouter();
   const [jobs, setJobs] = useState<Job[]>(initialJobs);
   const [addOpen, setAddOpen] = useState(false);
@@ -327,7 +329,12 @@ export function JobList({ initialJobs, clients, vendors }: Props) {
 
   async function handleDelete(job: Job) {
     const who = `${job.clients?.name ?? "Client"} → ${job.vendors?.name ?? "Vendor"}`;
-    if (!confirm(`Delete job "${job.title ?? who}"? This cannot be undone.`)) return;
+    const label = job.title?.trim() ? job.title : who;
+    const ok = await confirmDelete({
+      title: "Delete this project?",
+      body: `You are about to delete “${label}”. This cannot be undone.`,
+    });
+    if (!ok) return;
     const supabase = createBrowserSupabase();
     const { error } = await supabase.from("jobs").delete().eq("id", job.id);
     if (error) {
@@ -391,6 +398,7 @@ export function JobList({ initialJobs, clients, vendors }: Props) {
 
   return (
     <div className="space-y-6">
+      {deleteConfirmDialog}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <button
           type="button"

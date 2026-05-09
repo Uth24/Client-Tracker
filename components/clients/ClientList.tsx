@@ -9,6 +9,7 @@ import { TablePagination } from "@/components/ui/TablePagination";
 import type { Client } from "@/lib/types/clients";
 import { ClientDetailModal } from "@/components/clients/ClientDetailModal";
 import { ClientFormModal } from "@/components/clients/ClientFormModal";
+import { useDeleteConfirmDialog } from "@/components/ui/use-delete-confirm";
 
 type Props = {
   initialClients: Client[];
@@ -28,6 +29,7 @@ export function ClientList({
   totalCount,
   searchQ,
 }: Props) {
+  const { confirmDelete, deleteConfirmDialog } = useDeleteConfirmDialog();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -56,7 +58,11 @@ export function ClientList({
   }, [debouncedSearch, searchQ, pathname, router]);
 
   async function handleDelete(c: Client) {
-    if (!confirm(`Delete client "${c.name}"? This cannot be undone.`)) return;
+    const ok = await confirmDelete({
+      title: "Delete this client?",
+      body: `You are about to delete “${c.name}”. This cannot be undone.`,
+    });
+    if (!ok) return;
     const supabase = createClient();
     const { error } = await supabase.from("clients").delete().eq("id", c.id);
     if (error) {
@@ -75,6 +81,7 @@ export function ClientList({
 
   return (
     <div className="space-y-6">
+      {deleteConfirmDialog}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative max-w-md flex-1">
           <label htmlFor="client-search" className="sr-only">

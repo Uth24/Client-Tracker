@@ -28,6 +28,19 @@ function formatDate(iso: string) {
   }
 }
 
+function formatAddressLines(lead: Lead): string[] {
+  const lines: string[] = [];
+  if (lead.address_line1?.trim()) lines.push(lead.address_line1.trim());
+  if (lead.address_line2?.trim()) lines.push(lead.address_line2.trim());
+  const cityParts = [lead.city?.trim(), lead.state?.trim()].filter(Boolean);
+  const cityState = cityParts.join(", ");
+  const zip = lead.zip_code?.trim();
+  if (cityState && zip) lines.push(`${cityState} ${zip}`);
+  else if (cityState) lines.push(cityState);
+  else if (zip) lines.push(zip);
+  return lines;
+}
+
 export function LeadDetailModal({ lead, open, onClose }: Props) {
   if (!lead) return null;
 
@@ -63,6 +76,65 @@ export function LeadDetailModal({ lead, open, onClose }: Props) {
           ) : (
             <p className="mt-0.5 text-zinc-600">—</p>
           )}
+        </div>
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            Contact
+          </p>
+          <dl className="mt-2 space-y-2 text-sm">
+            <div>
+              <dt className="text-xs font-medium text-zinc-500">Email</dt>
+              <dd className="mt-0.5 text-zinc-900">
+                {lead.email?.trim() ? (
+                  <a
+                    href={`mailto:${lead.email.trim()}`}
+                    className="font-medium text-sky-700 underline decoration-sky-300 underline-offset-2 hover:text-sky-900"
+                  >
+                    {lead.email.trim()}
+                  </a>
+                ) : (
+                  "—"
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium text-zinc-500">Phone</dt>
+              <dd className="mt-0.5 text-zinc-900">
+                {lead.phone?.trim() ? (
+                  <a
+                    href={`tel:${lead.phone.trim().replace(/\s+/g, "")}`}
+                    className="font-medium text-sky-700 underline decoration-sky-300 underline-offset-2 hover:text-sky-900"
+                  >
+                    {lead.phone.trim()}
+                  </a>
+                ) : (
+                  "—"
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium text-zinc-500">Address</dt>
+              <dd className="mt-0.5 text-zinc-900">
+                {(() => {
+                  const lines = formatAddressLines(lead);
+                  if (lines.length === 0) return "—";
+                  return (
+                    <span className="block whitespace-pre-line">
+                      {lines.join("\n")}
+                    </span>
+                  );
+                })()}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium text-zinc-500">
+                Contact notes
+              </dt>
+              <dd className="mt-0.5 whitespace-pre-wrap text-zinc-800">
+                {lead.notes?.trim() ? lead.notes : "—"}
+              </dd>
+            </div>
+          </dl>
         </div>
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
